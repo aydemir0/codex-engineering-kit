@@ -80,6 +80,21 @@ def validate_skill_set() -> None:
         if not metadata.is_file():
             fail(f"missing skills/{skill}/agents/openai.yaml")
 
+        skill_text = read(skill_file)
+        if not skill_text.startswith("---\n"):
+            fail(f"skills/{skill}/SKILL.md missing YAML frontmatter")
+        if not re.search(rf"(?m)^name:\s*{re.escape(skill)}\s*$", skill_text):
+            fail(f"skills/{skill}/SKILL.md frontmatter name mismatch")
+        if not re.search(r"(?m)^description:\s*\S.+$", skill_text):
+            fail(f"skills/{skill}/SKILL.md missing non-empty description")
+
+        metadata_text = read(metadata)
+        for key in ("display_name", "short_description", "default_prompt"):
+            if not re.search(rf"(?m)^\s*{key}:\s*\S.+$", metadata_text):
+                fail(f"skills/{skill}/agents/openai.yaml missing {key}")
+        if f"${skill}" not in metadata_text:
+            fail(f"skills/{skill}/agents/openai.yaml default prompt must mention ${skill}")
+
 
 def validate_orchestrator() -> None:
     roles_root = ROOT / "skills" / "orchestrator" / "references" / "roles"
