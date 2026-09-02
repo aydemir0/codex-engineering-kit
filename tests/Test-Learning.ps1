@@ -15,32 +15,32 @@ try {
     New-Item -ItemType Directory -Path $TempRoot -Force | Out-Null
     $InputPath = Join-Path $TempRoot 'observations.json'
     $OutputPath = Join-Path $TempRoot 'candidates.json'
+    $SyntheticToken = 'ghp_' + ('A' * 24)
 
-    @'
-[
-  {
-    "title": "Node-only PDF import must stay out of browser module evaluation",
-    "category": "error_resolution",
-    "evidence": [
-      "DOMMatrix failure reproduced during server module evaluation",
-      "moving browser-only import behind the runtime boundary fixed the build"
-    ],
-    "scope": "general"
-  },
-  {
-    "title": "Fixed a one-off spelling typo",
-    "category": "simple_typo",
-    "evidence": ["single typo correction"],
-    "scope": "project"
-  },
-  {
-    "title": "Secret-bearing workaround",
-    "category": "workaround",
-    "evidence": ["use ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ123456 directly in config"],
-    "scope": "general"
-  }
-]
-'@ | Set-Content -LiteralPath $InputPath
+    $Observations = @(
+        [ordered]@{
+            title = 'Node-only PDF import must stay out of browser module evaluation'
+            category = 'error_resolution'
+            evidence = @(
+                'DOMMatrix failure reproduced during server module evaluation',
+                'moving browser-only import behind the runtime boundary fixed the build'
+            )
+            scope = 'general'
+        },
+        [ordered]@{
+            title = 'Fixed a one-off spelling typo'
+            category = 'simple_typo'
+            evidence = @('single typo correction')
+            scope = 'project'
+        },
+        [ordered]@{
+            title = 'Secret-bearing workaround'
+            category = 'workaround'
+            evidence = @("use $SyntheticToken directly in config")
+            scope = 'general'
+        }
+    )
+    $Observations | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $InputPath
 
     & $Learn -InputPath $InputPath -OutputPath $OutputPath | Out-Null
     Assert-True (Test-Path -LiteralPath $OutputPath) 'candidate output must be created'
