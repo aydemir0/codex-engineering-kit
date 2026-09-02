@@ -120,7 +120,8 @@ if (Test-Path -LiteralPath $PackageJsonPath -PathType Leaf) {
 $Security = Test-SecretPatterns $ProjectPath
 $Diff = New-SkippedGate 'Project is not a Git work tree.'
 $GitProbe = & git -C $ProjectPath rev-parse --is-inside-work-tree 2>$null
-if ($LASTEXITCODE -eq 0 -and ($GitProbe | Out-String).Trim() -eq 'true') {
+$GitProbeExit = $LASTEXITCODE
+if ($GitProbeExit -eq 0 -and ($GitProbe | Out-String).Trim() -eq 'true') {
     $DiffOutput = & git -C $ProjectPath diff --check 2>&1
     $DiffExit = $LASTEXITCODE
     $DiffEvidence = (($DiffOutput | Select-Object -Last 20) -join [Environment]::NewLine).Trim()
@@ -145,7 +146,9 @@ $Result = [ordered]@{
 }
 
 if ($Json) {
-    $Result | ConvertTo-Json -Depth 7
+    $JsonOutput = $Result | ConvertTo-Json -Depth 7
+    $global:LASTEXITCODE = 0
+    Write-Output $JsonOutput
     return
 }
 
@@ -155,3 +158,4 @@ foreach ($Name in @('build','typecheck','lint','tests','security','diff')) {
     Write-Host ("{0,-10} {1}" -f $Name.ToUpperInvariant(), $Gate.status)
 }
 Write-Host "READINESS  $Readiness"
+$global:LASTEXITCODE = 0
