@@ -1,0 +1,4 @@
+interface:
+  display_name: "Software Architecture"
+  short_description: "Design evidence-based architecture and safe migrations"
+  default_prompt: "Use $software-architecture to inspect this repository and produce an implementation-ready architecture decision with migration and rollback."

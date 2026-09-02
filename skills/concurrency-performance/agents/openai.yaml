@@ -1,0 +1,4 @@
+interface:
+  display_name: "Concurrency & Performance"
+  short_description: "Fix concurrency risks and measured performance bottlenecks"
+  default_prompt: "Use $concurrency-performance to inspect this system, prove the bottleneck or correctness risk, and propose a measured fix."

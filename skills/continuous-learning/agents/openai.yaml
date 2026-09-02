@@ -1,0 +1,4 @@
+interface:
+  display_name: "Continuous Learning"
+  short_description: "Extract safe reusable patterns as reviewable candidates"
+  default_prompt: "Use $continuous-learning to extract reusable engineering candidates from this work without auto-promoting them."

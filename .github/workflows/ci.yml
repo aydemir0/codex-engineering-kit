@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main, feat/initial-architecture]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  content-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Validate repository contracts
+        run: python tests/validate_content.py
+
+  powershell-contracts:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Installer lifecycle
+        shell: pwsh
+        run: ./tests/Test-Install.ps1
+      - name: Verification runner
+        shell: pwsh
+        run: ./tests/Test-Verify.ps1
+      - name: Learning safety
+        shell: pwsh
+        run: ./tests/Test-Learning.ps1
+      - name: MCP configuration
+        shell: pwsh
+        run: ./tests/Test-Mcp.ps1
