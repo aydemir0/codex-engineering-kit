@@ -1,0 +1,4 @@
+interface:
+  display_name: "Engineering Orchestrator"
+  short_description: "Route complex engineering work through focused roles"
+  default_prompt: "Use $orchestrator to route this engineering task through the smallest necessary role set and verification workflow."
