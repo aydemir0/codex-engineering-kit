@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main, feat/initial-architecture]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  content-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate repository contracts
+        run: python tests/validate_content.py
+
+  powershell-contracts:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Installer lifecycle
+        shell: pwsh
+        run: ./tests/Test-Install.ps1
+      - name: Verification runner
+        shell: pwsh
+        run: ./tests/Test-Verify.ps1
+      - name: Learning safety
+        shell: pwsh
+        run: ./tests/Test-Learning.ps1
+      - name: MCP configuration
+        shell: pwsh
+        run: ./tests/Test-Mcp.ps1
