@@ -1,0 +1,4 @@
+interface:
+  display_name: "Eval Harness"
+  short_description: "Define capability and regression evals with real graders"
+  default_prompt: "Use $eval-harness to define and run measurable capability and regression evals for this engineering change."
