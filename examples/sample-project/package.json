@@ -1,0 +1,10 @@
+{
+  "name": "codex-engineering-kit-sample",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "build": "node -e \"require('fs').accessSync('src/index.ts')\"",
+    "typecheck": "node -e \"const s=require('fs').readFileSync('src/index.ts','utf8'); if(!s.includes('export function add')) process.exit(1)\"",
+    "test": "node tests/smoke.test.mjs"
+  }
+}
