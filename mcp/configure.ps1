@@ -25,7 +25,7 @@ foreach ($Name in @($Template.required_environment)) {
 }
 
 if ($Missing.Count -gt 0) {
-    throw "Missing required local environment variables for $Provider: $($Missing -join ', ')"
+    throw "Missing required local environment variables for ${Provider}: $($Missing -join ', ')"
 }
 
 $ResolvedOutput = [System.IO.Path]::GetFullPath($OutputPath)
