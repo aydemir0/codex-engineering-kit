@@ -1,0 +1,4 @@
+interface:
+  display_name: "Verification Loop"
+  short_description: "Verify build, tests, security, and readiness with evidence"
+  default_prompt: "Use $verification-loop to verify this change with repository-native commands and return an evidence-based readiness state."
