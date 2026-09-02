@@ -1,0 +1,7 @@
+{
+  "provider": "cloudflare",
+  "login_required": true,
+  "required_environment": [],
+  "configuration_scope": "local-only",
+  "notes": "Prefer the supported login flow. If an environment token is required for a specific setup, supply it locally with least privilege."
+}
