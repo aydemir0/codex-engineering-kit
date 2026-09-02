@@ -1,0 +1,7 @@
+{
+  "provider": "railway",
+  "login_required": true,
+  "required_environment": [],
+  "configuration_scope": "local-only",
+  "notes": "Prefer the Railway CLI or supported login flow and keep project credentials out of version control."
+}
