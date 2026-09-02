@@ -1,0 +1,7 @@
+{
+  "provider": "supabase",
+  "login_required": false,
+  "required_environment": ["SUPABASE_ACCESS_TOKEN"],
+  "configuration_scope": "local-only",
+  "notes": "Use a locally supplied environment variable with the minimum required permissions. Never store the token in this repository."
+}
