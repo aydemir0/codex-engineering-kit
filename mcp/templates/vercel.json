@@ -1,0 +1,7 @@
+{
+  "provider": "vercel",
+  "login_required": true,
+  "required_environment": [],
+  "configuration_scope": "local-only",
+  "notes": "Prefer an interactive/local login flow. Keep generated credentials and project-specific secrets outside the public repository."
+}
