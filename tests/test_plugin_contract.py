@@ -53,7 +53,9 @@ class PluginContractTests(unittest.TestCase):
         entry = plugins[0]
         self.assertEqual(entry["name"], "codex-engineering-kit")
         self.assertEqual(entry["source"]["source"], "local")
-        self.assertEqual(entry["source"]["path"], "../..")
+        # Codex resolves local marketplace plugin paths from the marketplace
+        # repository root, not from the nested .agents/plugins directory.
+        self.assertEqual(entry["source"]["path"], ".")
         self.assertEqual(entry["policy"]["installation"], "AVAILABLE")
         self.assertEqual(entry["policy"]["authentication"], "ON_USE")
 
