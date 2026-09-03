@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+import os
+import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.acceptance.plugin_smoke import build_environment, find_plugin, sanitize_record
+from scripts.acceptance.plugin_smoke import (
+    build_environment,
+    find_plugin,
+    run_command,
+    sanitize_record,
+)
 
 
 class PluginSmokeHelperTests(unittest.TestCase):
@@ -72,6 +79,19 @@ class PluginSmokeHelperTests(unittest.TestCase):
         self.assertNotIn("installedPath", result["parsed"])
         self.assertEqual(result["parsed"]["name"], "codex-engineering-kit")
         self.assertEqual(result["returncode"], 0)
+
+    @unittest.skipUnless(os.name == "nt", "Windows executable resolution regression")
+    def test_run_command_resolves_cmd_shim_from_child_path(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="cek-cmd-shim-") as temp_dir:
+            shim = Path(temp_dir) / "fake-codex.cmd"
+            shim.write_text("@echo off\r\necho fake-codex 1.0\r\n", encoding="utf-8")
+            env = dict(os.environ)
+            env["PATH"] = temp_dir + os.pathsep + env.get("PATH", "")
+
+            result = run_command(["fake-codex", "--version"], env)
+
+            self.assertEqual(result["returncode"], 0)
+            self.assertEqual(result["stdout"], "fake-codex 1.0")
 
 
 if __name__ == "__main__":
