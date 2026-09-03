@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -142,6 +143,28 @@ class HookDispatchBehaviorTests(unittest.TestCase):
         self.assertIn("session-1", snapshot_text)
         self.assertNotIn("transcript", snapshot_text.lower())
         self.assertNotIn("C:/private", snapshot_text)
+
+    def test_session_end_timeout_fixture_delays_and_marks_acceptance_run(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            with patch.dict(
+                os.environ,
+                {
+                    "CEK_HOOK_ACCEPTANCE": "1",
+                    "CEK_HOOK_ACCEPTANCE_SESSION_END_DELAY_MS": "75",
+                },
+                clear=False,
+            ):
+                started = time.perf_counter()
+                dispatch(self.payload("SessionEnd", cwd))
+                elapsed = time.perf_counter() - started
+            evidence = (cwd / ".codex-kit" / "hooks" / "events.jsonl").read_text(
+                encoding="utf-8"
+            )
+
+        self.assertGreaterEqual(elapsed, 0.05)
+        self.assertIn('"fixture":"session-end-timeout"', evidence)
+        self.assertIn('"phase":"started"', evidence)
 
     def test_subagent_lifecycle_records_bounded_identity_only(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
