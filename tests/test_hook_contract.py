@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 HOOKS_FILE = ROOT / "hooks" / "hooks.json"
 DISPATCHER = ROOT / "hooks" / "scripts" / "hook_dispatch.py"
 PLUGIN_MANIFEST = ROOT / ".codex-plugin" / "plugin.json"
+GITIGNORE = ROOT / ".gitignore"
 
 REQUIRED_EVENTS = {
     "SessionStart",
@@ -70,6 +71,14 @@ class NativeHookContractTests(unittest.TestCase):
     def test_primary_plugin_manifest_still_omits_explicit_hooks_override(self) -> None:
         manifest = self.load_json(PLUGIN_MANIFEST)
         self.assertNotIn("hooks", manifest)
+
+    def test_hook_runtime_state_is_gitignored(self) -> None:
+        patterns = {
+            line.strip()
+            for line in GITIGNORE.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        }
+        self.assertIn(".codex-kit/hooks/", patterns)
 
     def test_hook_packaging_has_no_machine_paths_or_placeholders(self) -> None:
         hooks_text = HOOKS_FILE.read_text(encoding="utf-8")
