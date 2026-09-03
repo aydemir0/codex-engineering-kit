@@ -9,13 +9,15 @@ Codex runtime reported by binary: `codex-cli 0.147.0`
 
 ## Status
 
-**OPEN compatibility discrepancy.**
+**CONFIRMED Windows 0.147.0 compatibility discrepancy; timeout-budget gate remains OPEN.**
 
 This record does **not** close the Phase B4 `SessionEnd` timeout-budget acceptance gate.
 
 The real Windows Codex 0.147.0 runtime allowed an acceptance-only SessionEnd fixture configured to delay for 5000 ms to complete normally even though the shipped plugin configuration declares `timeout: 1` for SessionEnd.
 
-The result is recorded as observed runtime behavior, not as a claim about all Codex 0.147.0 builds or platforms.
+The local acceptance binary was subsequently proven byte-for-byte identical to OpenAI's official `rust-v0.147.0` Windows x86_64 standalone release executable. The observed discrepancy therefore cannot be attributed to a stale npm residue, alternate local binary, or mismatch between the npm-installed acceptance binary and the official release asset.
+
+The result is still scoped to Windows Codex 0.147.0 and does not claim equivalent behavior on Desktop 0.152.0, macOS, Linux, or later CLI versions.
 
 ## CEK configuration under test
 
@@ -147,9 +149,47 @@ Relevant first-party paths:
 - `codex-rs/core/src/hook_runtime.rs`
   - root SessionEnd execution awaits `hooks.run_session_end(request)` during shutdown.
 
-The observed local runtime behavior therefore conflicts with the expected source-level timeout contract under this Windows acceptance setup.
+The observed official Windows runtime behavior therefore conflicts with the expected source-level timeout contract under this acceptance setup.
 
-This record does not yet establish whether the discrepancy comes from binary/package provenance, build differences, or another runtime condition not visible from repository-side configuration.
+## Official binary provenance
+
+OpenAI's official `rust-v0.147.0` GitHub release publishes the Windows x86_64 executable:
+
+```text
+codex-x86_64-pc-windows-msvc.exe
+```
+
+GitHub reports its SHA-256 as:
+
+```text
+935A1911ED2556E4FFCEC995F4886AC2AC425863BA26FED264DF62E30272AD9D
+```
+
+The clean local acceptance binary reported:
+
+```text
+codex-cli 0.147.0
+```
+
+and its locally computed SHA-256 was:
+
+```text
+935A1911ED2556E4FFCEC995F4886AC2AC425863BA26FED264DF62E30272AD9D
+```
+
+Comparison:
+
+```text
+BYTE-FOR-BYTE MATCH: True
+```
+
+Local binary size:
+
+```text
+298668336 bytes
+```
+
+This matches the official release asset size published by GitHub. Binary provenance is therefore closed for this acceptance run: the runtime under test is byte-for-byte the official OpenAI Codex 0.147.0 Windows x86_64 release executable.
 
 ## Raw artifact integrity
 
@@ -161,25 +201,9 @@ The final deterministic watcher run produced `.codex-kit/hooks/events.jsonl` SHA
 
 Ephemeral session identifiers are intentionally omitted from this committed evidence file.
 
-## External release provenance reference
-
-The official OpenAI Codex `rust-v0.147.0` GitHub release publishes a Windows x86_64 executable asset named:
-
-```text
-codex-x86_64-pc-windows-msvc.exe
-```
-
-GitHub reports the release asset SHA-256 as:
-
-```text
-935a1911ed2556e4ffcec995f4886ac2ac425863ba26fed264df62e30272ad9d
-```
-
-A local hash comparison against the npm-installed acceptance binary remains the next diagnostic step. Until that comparison is made, this document must not claim the local binary is byte-for-byte identical to the standalone release asset.
-
 ## Gate status
 
-Confirmed on real Windows Codex CLI reporting version 0.147.0:
+Confirmed on the official Windows Codex CLI 0.147.0 release binary:
 
 - SessionEnd hook executes;
 - acceptance-only delay fixture executes;
@@ -187,12 +211,16 @@ Confirmed on real Windows Codex CLI reporting version 0.147.0:
 - repository and plugin-cache dispatcher are identical;
 - a 5000 ms delay completes normally;
 - deterministic watcher observes approximately 4961 ms from fixture marker to normal SessionEnd;
-- normal SessionEnd snapshot is written.
+- normal SessionEnd snapshot is written;
+- local runtime binary is byte-for-byte identical to the official OpenAI 0.147.0 Windows x86_64 release executable.
 
 Not confirmed / remains open:
 
-- enforcement of the configured one-second SessionEnd timeout on this runtime;
-- byte-for-byte provenance match between the npm-installed binary and official standalone Windows release asset;
-- whether the same discrepancy reproduces on Desktop 0.152.0, macOS, or Linux.
+- enforcement of the configured one-second SessionEnd timeout on Windows 0.147.0;
+- whether the same discrepancy reproduces on Desktop 0.152.0, macOS, Linux, or later CLI versions.
 
-Therefore the v0.2 `SessionEnd meets timeout budget` acceptance item remains **OPEN**.
+### Phase B4 disposition
+
+The `SessionEnd meets timeout budget` item remains **OPEN / upstream-runtime-limited on Windows Codex 0.147.0**. CEK must not claim that the host-enforced one-second timeout works on this runtime.
+
+This discrepancy is now sufficiently isolated to avoid blocking unrelated B4 work. The next implementation slice may proceed to the native Codex subagent vertical slice and real `SubagentStart` / `SubagentStop` acceptance, while preserving this timeout limitation explicitly in the compatibility matrix and release evidence.
