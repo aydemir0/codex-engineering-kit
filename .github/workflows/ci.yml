@@ -23,6 +23,8 @@ jobs:
         run: python -m unittest tests.test_plugin_contract -v
       - name: Validate plugin acceptance helpers
         run: python -m unittest tests.test_plugin_smoke -v
+      - name: Validate native hook packaging contract
+        run: python -m unittest tests.test_hook_contract -v
 
   powershell-contracts:
     runs-on: windows-latest
@@ -37,6 +39,9 @@ jobs:
       - name: Windows plugin acceptance helper regression
         shell: pwsh
         run: python -m unittest tests.test_plugin_smoke -v
+      - name: Windows native hook packaging contract
+        shell: pwsh
+        run: python -m unittest tests.test_hook_contract -v
       - name: Installer lifecycle
         shell: pwsh
         run: ./tests/Test-Install.ps1
