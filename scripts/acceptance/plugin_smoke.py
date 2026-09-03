@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -64,9 +65,23 @@ def sanitize_record(record: Mapping[str, Any]) -> dict[str, Any]:
     return sanitized
 
 
+def _resolve_executable(args: Sequence[str], env: Mapping[str, str]) -> list[str]:
+    if not args:
+        raise ValueError("command must contain an executable")
+    command = list(args)
+    executable = command[0]
+    if Path(executable).is_absolute() or Path(executable).parent != Path("."):
+        return command
+    resolved = shutil.which(executable, path=env.get("PATH"))
+    if resolved:
+        command[0] = resolved
+    return command
+
+
 def run_command(args: Sequence[str], env: Mapping[str, str]) -> dict[str, Any]:
+    command = _resolve_executable(args, env)
     completed = subprocess.run(
-        list(args),
+        command,
         env=dict(env),
         capture_output=True,
         text=True,
