@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,8 @@ SUPPORTED_EVENTS = {
 MAX_CONTEXT_CHARS = 6000
 STATE_RELATIVE = Path(".codex-kit") / "hooks"
 ACCEPTANCE_SENTINEL = "echo cek_hook_deny_fixture"
+ACCEPTANCE_SESSION_END_DELAY_MS_ENV = "CEK_HOOK_ACCEPTANCE_SESSION_END_DELAY_MS"
+MAX_ACCEPTANCE_SESSION_END_DELAY_MS = 5000
 DESTRUCTIVE_COMMANDS = {
     "rm -rf /",
     "rm -rf /*",
@@ -111,6 +114,19 @@ def _is_acceptance_sentinel(payload: dict[str, Any]) -> bool:
     )
 
 
+def _acceptance_session_end_delay_ms() -> int:
+    if os.environ.get("CEK_HOOK_ACCEPTANCE") != "1":
+        return 0
+    raw_delay = os.environ.get(ACCEPTANCE_SESSION_END_DELAY_MS_ENV)
+    if raw_delay is None:
+        return 0
+    try:
+        delay_ms = int(raw_delay)
+    except ValueError:
+        return 0
+    return min(max(delay_ms, 0), MAX_ACCEPTANCE_SESSION_END_DELAY_MS)
+
+
 def _session_start(payload: dict[str, Any]) -> dict[str, Any]:
     context = "Codex Engineering Kit lifecycle hooks are active for this workspace."
     if payload.get("source") == "compact":
@@ -139,6 +155,16 @@ def _session_start(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _session_end(payload: dict[str, Any]) -> dict[str, Any]:
+    delay_ms = _acceptance_session_end_delay_ms()
+    if delay_ms:
+        _append_event(
+            payload,
+            fixture="session-end-timeout",
+            phase="started",
+            delayMs=delay_ms,
+        )
+        time.sleep(delay_ms / 1000)
+
     snapshot = {
         key: value
         for key, value in _safe_identity(payload).items()
