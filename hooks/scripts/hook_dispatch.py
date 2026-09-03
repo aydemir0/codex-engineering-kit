@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -18,6 +19,7 @@ SUPPORTED_EVENTS = {
 
 MAX_CONTEXT_CHARS = 6000
 STATE_RELATIVE = Path(".codex-kit") / "hooks"
+ACCEPTANCE_SENTINEL = "echo cek_hook_deny_fixture"
 DESTRUCTIVE_COMMANDS = {
     "rm -rf /",
     "rm -rf /*",
@@ -102,6 +104,13 @@ def _is_narrow_destructive_command(payload: dict[str, Any]) -> bool:
     return _normalize_command(payload) in DESTRUCTIVE_COMMANDS
 
 
+def _is_acceptance_sentinel(payload: dict[str, Any]) -> bool:
+    return (
+        os.environ.get("CEK_HOOK_ACCEPTANCE") == "1"
+        and _normalize_command(payload) == ACCEPTANCE_SENTINEL
+    )
+
+
 def _session_start(payload: dict[str, Any]) -> dict[str, Any]:
     context = "Codex Engineering Kit lifecycle hooks are active for this workspace."
     if payload.get("source") == "compact":
@@ -141,6 +150,17 @@ def _session_end(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _pre_tool_use(payload: dict[str, Any]) -> dict[str, Any]:
+    if _is_acceptance_sentinel(payload):
+        _append_event(payload, decision="deny", fixture="acceptance")
+        return {
+            "hookSpecificOutput": {
+                "hookEventName": "PreToolUse",
+                "permissionDecision": "deny",
+                "permissionDecisionReason": (
+                    "Blocked by Codex Engineering Kit acceptance fixture."
+                ),
+            }
+        }
     if _is_narrow_destructive_command(payload):
         _append_event(payload, decision="deny")
         return {
