@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, feat/initial-architecture]
+    branches: [main, feat/initial-architecture, feat/codex-native-plugin-v0.2]
   pull_request:
     branches: [main]
 
@@ -19,6 +19,8 @@ jobs:
           python-version: '3.11'
       - name: Validate repository contracts
         run: python tests/validate_content.py
+      - name: Validate native plugin contract
+        run: python -m unittest tests.test_plugin_contract -v
 
   powershell-contracts:
     runs-on: windows-latest
