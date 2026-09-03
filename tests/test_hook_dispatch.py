@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from hooks.scripts.hook_dispatch import dispatch
 
@@ -47,6 +49,29 @@ class HookDispatchBehaviorTests(unittest.TestCase):
         self.assertEqual(specific["hookEventName"], "PreToolUse")
         self.assertEqual(specific["permissionDecision"], "deny")
         self.assertIn("destructive", specific["permissionDecisionReason"].lower())
+
+    def test_pre_tool_use_denies_safe_acceptance_sentinel_only_in_acceptance_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            payload = self.payload(
+                "PreToolUse",
+                Path(tmp),
+                tool_name="Bash",
+                tool_use_id="tool-safe-deny",
+                tool_input={"command": "echo CEK_HOOK_DENY_FIXTURE"},
+            )
+            with patch.dict(os.environ, {"CEK_HOOK_ACCEPTANCE": "1"}, clear=False):
+                result = dispatch(payload)
+            without_mode = dispatch(payload)
+
+        self.assertEqual(
+            result["hookSpecificOutput"]["permissionDecision"],
+            "deny",
+        )
+        self.assertIn(
+            "acceptance",
+            result["hookSpecificOutput"]["permissionDecisionReason"].lower(),
+        )
+        self.assertEqual(without_mode, {})
 
     def test_session_start_emits_bounded_context(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
