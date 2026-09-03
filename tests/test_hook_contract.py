@@ -33,10 +33,9 @@ class NativeHookContractTests(unittest.TestCase):
         self.assertIsInstance(hooks, dict)
         self.assertEqual(set(hooks), REQUIRED_EVENTS)
 
-    def test_each_event_uses_portable_sync_command_dispatcher(self) -> None:
+    def test_each_event_uses_codex_native_plugin_root_expansion(self) -> None:
         hooks = self.load_json(HOOKS_FILE)["hooks"]
-        unix_fragment = '$PLUGIN_ROOT/hooks/scripts/hook_dispatch.py'
-        windows_fragment = r"%PLUGIN_ROOT%\hooks\scripts\hook_dispatch.py"
+        portable_fragment = "${PLUGIN_ROOT}/hooks/scripts/hook_dispatch.py"
 
         for event in REQUIRED_EVENTS:
             with self.subTest(event=event):
@@ -49,8 +48,10 @@ class NativeHookContractTests(unittest.TestCase):
                 self.assertEqual(len(handlers), 1)
                 handler = handlers[0]
                 self.assertEqual(handler.get("type"), "command")
-                self.assertIn(unix_fragment, handler.get("command", ""))
-                self.assertIn(windows_fragment, handler.get("commandWindows", ""))
+                self.assertIn(portable_fragment, handler.get("command", ""))
+                self.assertIn(portable_fragment, handler.get("commandWindows", ""))
+                self.assertNotIn("$PLUGIN_ROOT/", handler.get("command", ""))
+                self.assertNotIn("%PLUGIN_ROOT%", handler.get("commandWindows", ""))
                 self.assertFalse(handler.get("async", False))
                 timeout = handler.get("timeout")
                 self.assertIsInstance(timeout, int)
