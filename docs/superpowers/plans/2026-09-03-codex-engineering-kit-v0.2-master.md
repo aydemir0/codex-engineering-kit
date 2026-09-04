@@ -122,6 +122,15 @@ Produces:
 
 Exit gate: isolated write-track invariants pass and no public `lean`/domain-coverage claim is promoted without test/benchmark evidence.
 
+**Exit gate status: CLOSED (2026-09-04).** Evidence is scoped to the implemented Plan E boundary:
+
+- `docs/research/evidence/plan-e-manual-worktree-acceptance.md` binds the manual Git-worktree acceptance to Git `2.55.0`, detached creation, unique branches, isolated writes, clean-source refusal, conflict-stop, owned cleanup, and zero remaining fixture worktrees;
+- the optional `backend-patterns` and `frontend-patterns` contracts pass on Ubuntu, Windows, and macOS and remain narrow, repository-evidence-bound skills rather than blanket domain-coverage claims;
+- the fixed A/B/C benchmark protocol, five pinned cases, 45-run campaign definition, source-labeled report engine, and synthetic reporting self-tests pass deterministic contracts;
+- CI run #147 on `d562708975d66a6154342e58c75165f228ef088e` passes all three `plan-e-contracts` jobs, all three `plan-d-contracts` jobs, `content-contracts`, and `powershell-contracts` including the Windows installer lifecycle.
+
+This closure proves the Plan E implementation slice and deterministic acceptance boundary only. No real authenticated 45-run context-efficiency campaign has been executed for Plan E, so no measured `lean` or context-efficiency result is claimed. RISK-001, RISK-002, the Codex CLI 0.147.0 SessionEnd timeout discrepancy, and Plan F release/compatibility evidence remain open.
+
 ### Plan F — Release evidence + compatibility + submission readiness
 
 Produces:
