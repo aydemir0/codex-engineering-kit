@@ -11,6 +11,7 @@ from verification.git_checks import run_git_diff_check
 from verification.node import discover_node_steps
 from verification.process import ProcessResult
 from verification.python_project import discover_python_steps
+from verification.runner import verify_project
 from verification.security import scan_secret_patterns
 
 
@@ -362,6 +363,104 @@ class VerificationGenericChecksTests(unittest.TestCase):
 
         self.assertEqual(result.status, "skipped")
         self.assertIsNone(result.exit_code)
+
+
+class VerificationOrchestratorTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def test_node_classification_beats_python_markers_and_writes_versioned_artifact(self) -> None:
+        (self.root / "package.json").write_text(
+            json.dumps(
+                {
+                    "name": "cek-orchestrator",
+                    "private": True,
+                    "packageManager": "npm@10.0.0",
+                    "scripts": {},
+                }
+            ),
+            encoding="utf-8",
+        )
+        (self.root / "pyproject.toml").write_text("[project]\nname = 'also-python'\n", encoding="utf-8")
+
+        report = verify_project(self.root)
+
+        self.assertEqual(report.schema_version, 1)
+        self.assertEqual(report.project_type, "node")
+        artifact_path = self.root / ".codex-kit" / "verification" / "latest.json"
+        self.assertTrue(artifact_path.is_file())
+        artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+        self.assertEqual(artifact["schemaVersion"], 1)
+        self.assertEqual(artifact["kind"], "verification-report")
+        self.assertEqual(artifact["projectType"], "node")
+        self.assertEqual(artifact["status"], report.status)
+        self.assertEqual(len(artifact["steps"]), len(report.steps))
+        for step in artifact["steps"]:
+            self.assertEqual(
+                set(step),
+                {"name", "command", "status", "exitCode", "durationMs", "evidence"},
+            )
+            self.assertIn(step["status"], {"passed", "failed", "skipped", "unavailable"})
+            self.assertGreaterEqual(step["durationMs"], 0)
+            self.assertLessEqual(len(step["evidence"].encode("utf-8")), 8192)
+
+    def test_python_markers_classify_python_when_package_json_is_absent(self) -> None:
+        (self.root / "pyproject.toml").write_text("[project]\nname = 'cek-python'\n", encoding="utf-8")
+
+        report = verify_project(self.root)
+
+        self.assertEqual(report.project_type, "python")
+
+    def test_repository_without_language_markers_is_generic(self) -> None:
+        (self.root / "README.md").write_text("generic\n", encoding="utf-8")
+
+        report = verify_project(self.root)
+
+        self.assertEqual(report.project_type, "generic")
+
+    def test_failed_security_step_fails_report(self) -> None:
+        fake_secret = "ghp_" + ("C" * 24)
+        (self.root / "app.py").write_text(f"TOKEN = '{fake_secret}'\n", encoding="utf-8")
+
+        report = verify_project(self.root)
+
+        by_name = {step.name: step for step in report.steps}
+        self.assertEqual(by_name["security"].status, "failed")
+        self.assertEqual(report.status, "failed")
+
+    def test_cli_json_is_sorted_writes_requested_output_and_failed_report_exits_one(self) -> None:
+        fake_secret = "ghp_" + ("D" * 24)
+        (self.root / "app.py").write_text(f"TOKEN = '{fake_secret}'\n", encoding="utf-8")
+        output_path = self.root / "custom-report.json"
+
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "verification.cli",
+                "--project",
+                str(self.root),
+                "--json",
+                "--output",
+                str(output_path),
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 1)
+        stdout = completed.stdout.strip()
+        self.assertEqual(stdout, json.dumps(json.loads(stdout), sort_keys=True, separators=(",", ":")))
+        self.assertTrue(output_path.is_file())
+        payload = json.loads(output_path.read_text(encoding="utf-8"))
+        self.assertEqual(payload["schemaVersion"], 1)
+        self.assertEqual(payload["kind"], "verification-report")
+        self.assertEqual(payload["status"], "failed")
 
 
 if __name__ == "__main__":
