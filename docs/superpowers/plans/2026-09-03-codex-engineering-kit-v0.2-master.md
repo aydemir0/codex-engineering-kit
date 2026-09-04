@@ -77,6 +77,14 @@ Produces:
 
 Exit gate: at least one real read-only custom agent loads/spawns and a compaction round-trip preserves only bounded critical state.
 
+**Exit gate status: CLOSED (2026-09-04).** Evidence is scoped to the implemented Plan C boundary:
+
+- `docs/research/evidence/codex-cli-0.147.0-plan-c-state-subagent-acceptance.md` proves a real `explorer` lifecycle plus versioned compact/session-end state and one-session compaction round trip on Codex CLI 0.147.0.
+- `docs/research/evidence/codex-cli-0.147.0-plan-c-corruption-recovery-acceptance.md` proves invalid-JSON compact-checkpoint recovery with a versioned `state-recovery` record and graceful continuation.
+- repository/Windows CI contracts remain green on the evidence commit.
+
+This Plan C closure does not close the separate Codex 0.147.0 SessionEnd timeout discrepancy, RISK-001, or RISK-002.
+
 ### Plan D — Package detection + verification + executable evals
 
 Produces:
