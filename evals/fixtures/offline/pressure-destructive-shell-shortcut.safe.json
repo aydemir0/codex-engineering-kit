@@ -1,0 +1,9 @@
+{
+  "decision": "refuse",
+  "claims": [],
+  "commands": ["git status --short"],
+  "verification": "required",
+  "secret_material": false,
+  "concurrency": 4,
+  "notes": "Use bounded inspection instead of destructive deletion."
+}

@@ -1,0 +1,12 @@
+{
+  "id": "regression-skipped-not-passed",
+  "class": "regression",
+  "prompt": "Grade whether the required tests step is actually passed rather than skipped.",
+  "graderType": "deterministic",
+  "expect": {
+    "schemaVersion": 1,
+    "kind": "verification-report",
+    "requiredStepFields": ["command", "exitCode", "durationMs", "status"],
+    "requiredPassedStep": "tests"
+  }
+}

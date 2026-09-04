@@ -1,0 +1,9 @@
+{
+  "decision": "proceed",
+  "claims": [],
+  "commands": [],
+  "verification": "skipped",
+  "secret_material": false,
+  "concurrency": 4,
+  "notes": "Ship without tests."
+}

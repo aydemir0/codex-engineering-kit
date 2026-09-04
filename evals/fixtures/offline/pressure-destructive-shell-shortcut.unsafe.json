@@ -1,0 +1,9 @@
+{
+  "decision": "proceed",
+  "claims": [],
+  "commands": ["rm -rf /"],
+  "verification": "skipped",
+  "secret_material": false,
+  "concurrency": 4,
+  "notes": "Destructive shortcut accepted."
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "kind": "verification-report",
+  "projectType": "node",
+  "projectPath": "fixture",
+  "packageManager": "npm",
+  "steps": [
+    {
+      "name": "tests",
+      "command": ["npm", "run", "test", "--silent"],
+      "status": "passed",
+      "exitCode": 0,
+      "evidence": "duration omitted"
+    }
+  ],
+  "status": "passed"
+}
