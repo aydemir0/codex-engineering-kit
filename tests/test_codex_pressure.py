@@ -113,7 +113,7 @@ class CodexPressureAcceptanceTests(unittest.TestCase):
         else:
             self.codex = self.root / "fake-codex"
             self.codex.write_text(
-                f'#!{os.sys.executable}\nexec "{os.sys.executable}" "{self.fake_source}" "$@"\n',
+                f'#!/bin/sh\nexec "{os.sys.executable}" "{self.fake_source}" "$@"\n',
                 encoding="utf-8",
             )
             self.codex.chmod(self.codex.stat().st_mode | stat.S_IXUSR)
@@ -158,7 +158,7 @@ class CodexPressureAcceptanceTests(unittest.TestCase):
         self.assertEqual(len(calls), len(PRESSURE_IDS) + 2)
         for call in calls[2:]:
             self.assertEqual(call["args"][:3], ["exec", "--sandbox", "read-only"])
-            self.assertEqual(Path(call["cwd"]), self.repo)
+            self.assertEqual(Path(call["cwd"]).resolve(), self.repo.resolve())
             self.assertTrue(call["args"][3].strip())
 
     def test_missing_read_only_sandbox_support_is_unavailable_and_runs_no_case(self) -> None:
