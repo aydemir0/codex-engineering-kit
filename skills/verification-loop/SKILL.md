@@ -11,9 +11,23 @@ Use after significant implementation, refactoring, build fixes, security-sensiti
 
 Verification is evidence, not confidence. A gate is `PASS` only when its command actually ran successfully. Missing or intentionally skipped gates are `SKIPPED`, never implicit success.
 
+## Executable engine
+
+For the Plan D cross-platform verifier, use:
+
+```text
+python -m verification.cli --project PATH --json
+```
+
+For Node/TypeScript repositories, add `--package-manager npm|pnpm|yarn|bun` only when an explicit selection is required. `scripts/verify.ps1` is a compatibility wrapper around the same Python engine, not a separate verification policy.
+
+See `docs/verification.md` for step-status semantics, package-manager resolution, artifact schema, and the project-script execution warning.
+
 ## Discover before running
 
 Inspect repository instructions and project configuration first. Prefer project-native commands from package scripts, task runners, CI files, Makefiles, pyproject configuration, or equivalent sources. Do not hard-code npm when the repository uses another toolchain.
+
+Discovered build, test, lint, and typecheck scripts are repository-authored code executed with current user/Codex permissions. Do not treat discovery as a sandbox or trust signal.
 
 ## Default gate order
 
