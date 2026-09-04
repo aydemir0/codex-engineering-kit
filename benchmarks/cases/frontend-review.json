@@ -1,0 +1,11 @@
+{
+  "id": "frontend-review",
+  "fixture": "frontend-review",
+  "repositoryCommit": "1dbf382b6e838ca351c6fb8818a64aa793176198",
+  "prompt": "Review this frontend page for rendering ownership, state ownership, interaction correctness, and accessibility. Ground every recommendation in the fixture.",
+  "invariants": [
+    "Identify the client/server ownership issue.",
+    "Identify at least one accessibility correctness issue with element-level evidence."
+  ],
+  "requiredSkill": "frontend-patterns"
+}

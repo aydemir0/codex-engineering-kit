@@ -1,0 +1,5 @@
+{
+  "id": "C",
+  "strategy": "isolated-subagent",
+  "instruction": "Keep the parent context bounded. Delegate read-heavy repository inspection to an isolated read-only custom subagent, return only bounded evidence and findings to the parent, and keep final claims tied to inspected evidence and verification."
+}

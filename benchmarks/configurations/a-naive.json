@@ -1,0 +1,5 @@
+{
+  "id": "A",
+  "strategy": "naive-always-loaded",
+  "instruction": "Load the same broad engineering guidance before every task. Inspect repository evidence, preserve correctness and security boundaries, verify claims, consider failure behavior, concurrency, performance evidence, and tests, and keep conclusions evidence-bound."
+}
