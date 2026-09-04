@@ -1,6 +1,8 @@
 .codex-kit/local/
 .codex-kit/candidates/
 .codex-kit/hooks/
+.codex-kit/evals/
+__pycache__/
 .env
 .env.*
 !.env.example
