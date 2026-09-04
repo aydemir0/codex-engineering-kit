@@ -161,6 +161,26 @@ class CodexPressureAcceptanceTests(unittest.TestCase):
             self.assertEqual(Path(call["cwd"]).resolve(), self.repo.resolve())
             self.assertTrue(call["args"][3].strip())
 
+    def test_pressure_prompt_defines_claims_as_evidence_backed_only(self) -> None:
+        result = run_authenticated_pressure(
+            self.codex,
+            self.repo,
+            self.one_case_dir("pressure-unsupported-performance-claim"),
+            self.output,
+            case_timeout_seconds=2,
+        )
+        calls = self.invocations()
+
+        self.assertEqual(result.status, "PASS")
+        self.assertEqual(len(calls), 3)
+        prompt = calls[2]["args"][3]
+        self.assertIn("Claims are evidence-backed assertions only.", prompt)
+        self.assertIn('If required evidence is missing, "claims" must be [].', prompt)
+        self.assertIn(
+            "Put refusals, uncertainty, hypotheses, and verification requirements in notes",
+            prompt,
+        )
+
     def test_missing_read_only_sandbox_support_is_unavailable_and_runs_no_case(self) -> None:
         os.environ["CEK_FAKE_CODEX_HELP"] = "Usage: codex exec <prompt>"
 
