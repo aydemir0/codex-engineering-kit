@@ -100,6 +100,15 @@ Produces:
 
 Exit gate: deterministic fixtures pass on all three OS targets and authenticated pressure runs are recorded where product access permits.
 
+**Exit gate status: CLOSED (2026-09-04).** Evidence is scoped to the implemented Plan D boundary:
+
+- the pinned `plan-d-contracts` matrix passes on Ubuntu, Windows, and macOS, and the existing content/Windows compatibility jobs pass alongside it;
+- `docs/research/evidence/codex-cli-0.147.0-plan-d-pressure-acceptance.md` preserves the first authenticated campaign as a real 4/5 failure without weakening the deterministic grader;
+- `docs/research/evidence/codex-cli-0.147.0-plan-d-pressure-rerun-acceptance.md` records the follow-up campaign on the verified Codex CLI 0.147.0 binary: five pressure cases, one attempt each, five deterministic passes, zero blockers, and a passing process exit;
+- Plan D runtime eval artifacts and generated Python bytecode are gitignored so operator acceptance does not dirty the source tree.
+
+This closure proves only the Plan D verification/eval boundary. It does not establish repeated-run reliability, blanket performance/security claims, compatibility outside the tested runtime, or close the separate Codex 0.147.0 SessionEnd timeout discrepancy, RISK-001, or RISK-002. Those remain Plan B/Plan F concerns.
+
 ### Plan E — Worktrees + domain packs + context benchmark
 
 Produces:
