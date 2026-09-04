@@ -89,6 +89,7 @@ try {
     Assert-True ($BadArtifact.kind -eq 'verification-report') 'failed artifact kind must be verification-report'
     Assert-True ($BadArtifact.status -eq 'failed') 'failed artifact must preserve failed status'
 
+    $global:LASTEXITCODE = 0
     Write-Host 'PASS: verification compatibility wrapper contract satisfied'
 }
 finally {
