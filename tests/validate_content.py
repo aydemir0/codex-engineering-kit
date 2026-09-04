@@ -12,6 +12,8 @@ EXPECTED_SKILLS = {
     "verification-loop",
     "software-architecture",
     "concurrency-performance",
+    "backend-patterns",
+    "frontend-patterns",
 }
 REQUIRED_WORKFLOW_HEADINGS = (
     "## Entry conditions",
