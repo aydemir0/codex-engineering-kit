@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
+from verification.git_checks import run_git_diff_check
 from verification.node import discover_node_steps
 from verification.process import ProcessResult
+from verification.python_project import discover_python_steps
+from verification.security import scan_secret_patterns
 
 
 class VerificationNodeTests(unittest.TestCase):
@@ -183,6 +188,180 @@ class VerificationNodeTests(unittest.TestCase):
         self.assertEqual(tests_step.exit_code, 7)
         self.assertEqual(tests_step.duration_ms, 13)
         self.assertEqual(tests_step.evidence, "fixture failed")
+
+
+class VerificationPythonTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    @staticmethod
+    def passed_runner(seen: list[list[str]]):
+        def runner(command, cwd, timeout_seconds=120):
+            seen.append(list(command))
+            return ProcessResult(tuple(command), 0, 2, "passed", "", "")
+
+        return runner
+
+    def test_build_system_without_build_module_is_unavailable(self) -> None:
+        (self.root / "pyproject.toml").write_text(
+            "[build-system]\nrequires = []\nbuild-backend = 'cek.backend'\n",
+            encoding="utf-8",
+        )
+
+        result = discover_python_steps(
+            self.root,
+            module_available=lambda name: False,
+            runner=lambda *args, **kwargs: self.fail("missing build module must not execute"),
+        )
+        by_name = {step.name: step for step in result.steps}
+
+        self.assertEqual(by_name["build"].status, "unavailable")
+        self.assertEqual(by_name["build"].command, [sys.executable, "-m", "build"])
+        self.assertIn("build", by_name["build"].evidence)
+
+    def test_pytest_marker_without_pytest_module_is_unavailable(self) -> None:
+        (self.root / "pytest.ini").write_text("[pytest]\n", encoding="utf-8")
+
+        result = discover_python_steps(
+            self.root,
+            module_available=lambda name: False,
+            runner=lambda *args, **kwargs: self.fail("missing pytest module must not execute"),
+        )
+        by_name = {step.name: step for step in result.steps}
+
+        self.assertEqual(by_name["tests"].status, "unavailable")
+        self.assertEqual(by_name["tests"].command, [sys.executable, "-m", "pytest"])
+
+    def test_unittest_fallback_discovers_test_tree_without_pytest_marker(self) -> None:
+        tests_dir = self.root / "tests"
+        tests_dir.mkdir()
+        (tests_dir / "test_example.py").write_text("pass\n", encoding="utf-8")
+        seen: list[list[str]] = []
+
+        result = discover_python_steps(
+            self.root,
+            module_available=lambda name: False,
+            runner=self.passed_runner(seen),
+        )
+        by_name = {step.name: step for step in result.steps}
+
+        self.assertEqual(by_name["tests"].status, "passed")
+        self.assertIn(
+            [sys.executable, "-m", "unittest", "discover", "-s", "tests"],
+            seen,
+        )
+
+    def test_ruff_and_mypy_require_both_configuration_and_available_module(self) -> None:
+        (self.root / "pyproject.toml").write_text(
+            "[tool.ruff]\nline-length = 100\n\n[tool.mypy]\nstrict = true\n",
+            encoding="utf-8",
+        )
+        seen: list[list[str]] = []
+
+        result = discover_python_steps(
+            self.root,
+            module_available=lambda name: name in {"ruff", "mypy"},
+            runner=self.passed_runner(seen),
+        )
+        by_name = {step.name: step for step in result.steps}
+
+        self.assertEqual(by_name["lint"].status, "passed")
+        self.assertEqual(by_name["typecheck"].status, "passed")
+        self.assertIn([sys.executable, "-m", "ruff", "check", "."], seen)
+        self.assertIn([sys.executable, "-m", "mypy", "."], seen)
+        self.assertEqual(by_name["build"].status, "skipped")
+        self.assertEqual(by_name["tests"].status, "skipped")
+
+    def test_configured_ruff_and_mypy_are_skipped_when_modules_are_unavailable(self) -> None:
+        (self.root / "pyproject.toml").write_text(
+            "[tool.ruff]\nline-length = 100\n\n[tool.mypy]\nstrict = true\n",
+            encoding="utf-8",
+        )
+
+        result = discover_python_steps(
+            self.root,
+            module_available=lambda name: False,
+            runner=lambda *args, **kwargs: self.fail("optional unavailable tools must not execute"),
+        )
+        by_name = {step.name: step for step in result.steps}
+
+        self.assertEqual(by_name["lint"].status, "skipped")
+        self.assertEqual(by_name["typecheck"].status, "skipped")
+
+
+class VerificationGenericChecksTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def test_secret_scan_fails_on_synthetic_token_and_excludes_runtime_state(self) -> None:
+        fake_secret = "ghp_" + ("A" * 24)
+        (self.root / "app.py").write_text(f"TOKEN = '{fake_secret}'\n", encoding="utf-8")
+        runtime_dir = self.root / ".codex-kit"
+        runtime_dir.mkdir()
+        (runtime_dir / "ignored.txt").write_text(fake_secret, encoding="utf-8")
+
+        result = scan_secret_patterns(self.root)
+
+        self.assertEqual(result.name, "security")
+        self.assertEqual(result.status, "failed")
+        self.assertEqual(result.exit_code, 1)
+        self.assertIn("app.py", result.evidence)
+        self.assertNotIn(".codex-kit", result.evidence)
+
+    def test_secret_scan_passes_when_only_excluded_tree_contains_fixture(self) -> None:
+        fake_secret = "ghp_" + ("B" * 24)
+        runtime_dir = self.root / ".codex-kit"
+        runtime_dir.mkdir()
+        (runtime_dir / "ignored.txt").write_text(fake_secret, encoding="utf-8")
+
+        result = scan_secret_patterns(self.root)
+
+        self.assertEqual(result.status, "passed")
+        self.assertEqual(result.exit_code, 0)
+
+    def test_git_diff_check_preserves_real_failure_exit_code(self) -> None:
+        subprocess.run(["git", "init"], cwd=self.root, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.email", "cek@example.invalid"],
+            cwd=self.root,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "CEK Fixture"],
+            cwd=self.root,
+            check=True,
+        )
+        tracked = self.root / "tracked.txt"
+        tracked.write_text("clean\n", encoding="utf-8")
+        subprocess.run(["git", "add", "tracked.txt"], cwd=self.root, check=True)
+        subprocess.run(
+            ["git", "commit", "-m", "fixture"],
+            cwd=self.root,
+            check=True,
+            capture_output=True,
+        )
+        tracked.write_text("bad trailing whitespace   \n", encoding="utf-8")
+
+        result = run_git_diff_check(self.root)
+
+        self.assertEqual(result.name, "diff")
+        self.assertEqual(result.status, "failed")
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("whitespace", result.evidence.casefold())
+
+    def test_git_diff_check_is_skipped_outside_worktree(self) -> None:
+        result = run_git_diff_check(self.root)
+
+        self.assertEqual(result.status, "skipped")
+        self.assertIsNone(result.exit_code)
 
 
 if __name__ == "__main__":
