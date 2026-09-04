@@ -29,6 +29,10 @@ jobs:
         run: python -m unittest tests.test_hook_dispatch -v
       - name: Validate native reviewer agent contract
         run: python -m unittest tests.test_agent_contract -v
+      - name: Validate process runner contract
+        run: python -m unittest tests.test_process_runner -v
+      - name: Validate package manager contract
+        run: python -m unittest tests.test_package_manager -v
 
   powershell-contracts:
     runs-on: windows-latest
@@ -52,6 +56,12 @@ jobs:
       - name: Windows native reviewer agent contract
         shell: pwsh
         run: python -m unittest tests.test_agent_contract -v
+      - name: Windows process runner contract
+        shell: pwsh
+        run: python -m unittest tests.test_process_runner -v
+      - name: Windows package manager contract
+        shell: pwsh
+        run: python -m unittest tests.test_package_manager -v
       - name: Installer lifecycle
         shell: pwsh
         run: ./tests/Test-Install.ps1
