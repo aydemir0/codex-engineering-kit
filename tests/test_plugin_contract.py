@@ -27,6 +27,7 @@ class PluginContractTests(unittest.TestCase):
         self.assertNotIn("hooks", data)
         self.assertNotIn("mcpServers", data)
         self.assertNotIn("apps", data)
+        self.assertTrue((ROOT / "hooks" / "hooks.json").is_file())
 
     def test_manifest_has_real_publisher_metadata(self) -> None:
         data = self.load_json(PLUGIN)
