@@ -100,6 +100,48 @@ class ReleaseDocumentationTests(unittest.TestCase):
         self.assertNotIn("/home/", text)
         self.assertNotIn("sessionId", text)
 
+    def test_readme_removes_stale_six_skill_language(self) -> None:
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertNotIn("only six active skills", text.casefold())
+        self.assertNotIn("Install the six toolkit skills", text)
+        self.assertNotIn("Lean orchestration", text)
+        self.assertIn("backend-patterns", text)
+        self.assertIn("frontend-patterns", text)
+
+    def test_readme_links_release_evidence(self) -> None:
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("docs/release/compatibility-matrix.md", text)
+        self.assertIn("docs/release/claim-evidence-matrix.md", text)
+        self.assertIn("docs/release/v0.2-rc-checklist.md", text)
+
+    def test_roadmap_v02_names_actual_slices(self) -> None:
+        text = (ROOT / "ROADMAP.md").read_text(encoding="utf-8").casefold()
+        for phrase in ("native plugin", "hooks", "subagents", "verification", "worktree", "release evidence"):
+            self.assertIn(phrase, text)
+
+    def test_public_surface_avoids_unsupported_positive_claims(self) -> None:
+        paths = [
+            ROOT / "README.md",
+            ROOT / "SECURITY.md",
+            ROOT / "ROADMAP.md",
+            ROOT / "THIRD_PARTY_NOTICES.md",
+            ROOT / "docs" / "release" / "v0.2-rc-checklist.md",
+        ]
+        text = "\n".join(path.read_text(encoding="utf-8") for path in paths)
+        positive_patterns = (
+            re.compile(r"\b(?:a|the|is)\s+production[- ]grade\s+(?:engineering\s+)?toolkit\b", re.IGNORECASE),
+            re.compile(r"\bfully secure\b", re.IGNORECASE),
+            re.compile(r"\bfeature parity (?:is )?achieved\b", re.IGNORECASE),
+            re.compile(r"\bcross[- ]platform compatible\b", re.IGNORECASE),
+            re.compile(r"\bmeasured lean(?:er)?\b", re.IGNORECASE),
+        )
+        for line in text.splitlines():
+            lowered = line.casefold()
+            if any(marker in lowered for marker in ("does not claim", "do not claim", "not claimed", "no measured", "not a claim")):
+                continue
+            for pattern in positive_patterns:
+                self.assertNotRegex(line, pattern)
+
 
 if __name__ == "__main__":
     unittest.main()

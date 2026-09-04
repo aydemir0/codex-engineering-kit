@@ -1,71 +1,94 @@
 # Security Policy
 
-Codex Engineering Kit modifies local Codex skill directories and can inspect project repositories through its verification workflows. That makes file ownership, secrets, and trust boundaries part of the product design.
+Codex Engineering Kit modifies local Codex/plugin or skill state, can execute bounded lifecycle hooks, and can inspect project repositories through verification workflows. File ownership, executable trust, local state, secrets, and evidence handling are therefore explicit product boundaries.
 
 ## Supported versions
 
-Security fixes target the latest release and the current `main` branch. Pre-release feature branches may change rapidly and should not be treated as stable security contracts.
+Security fixes target the latest release and the current `main` branch. Pre-release feature branches, including v0.2 alpha work, may change rapidly and must not be treated as stable security contracts without the corresponding release evidence.
 
 ## Reporting a vulnerability
 
-Please use GitHub's private vulnerability reporting / security advisory flow for this repository when available.
+Use GitHub private vulnerability reporting / security advisories when available. If private reporting is unavailable, open only a minimal public issue asking for a private contact channel.
 
-If private reporting is unavailable, open a minimal public issue asking for a private contact channel. **Do not include exploit details, credentials, private keys, sensitive project data, or a working secret in a public issue.**
+Do **not** publish exploit details, credentials, private keys, sensitive project data, authentication/session material, private transcripts, or a working secret in a public issue.
 
-A useful private report includes:
-
-- affected version/commit;
-- operating environment;
-- affected script/skill/workflow;
-- minimal reproduction steps;
-- security impact;
-- whether user interaction is required;
-- a safe proof of concept using synthetic data.
+A useful private report includes the affected version/commit, environment, affected component, minimal synthetic reproduction, security impact, required user interaction, and a safe proof of concept.
 
 ## Security boundaries
 
+### Hooks are guardrails, not a sandbox
+
+v0.2 native hooks can provide bounded lifecycle evidence, state/compaction handling, and narrow PreToolUse deny/allow decisions. They are not an operating-system sandbox, a complete policy engine, or a guarantee that arbitrary unsafe behavior cannot occur.
+
+Hook configuration and executable code that is not managed by CEK remains a user trust/review boundary. A one-off trust bypass used for an isolated acceptance experiment would prove only that the tested loading/execution path worked under that bypass; it would **not** prove the normal trust UX.
+
+The primary plugin manifest continues to omit an explicit `hooks` override while RISK-001 is unresolved. Runtime compatibility status is tracked in `docs/release/compatibility-matrix.md`.
+
+### Python runtime requirement
+
+The shipped v0.2 hook dispatcher and runtime-dependent local-state features require Python 3.11+ to be available. Missing Python must be treated as a feature/runtime limitation rather than silently reported as successful hook execution.
+
 ### Toolkit-owned vs user-owned files
 
-The installer records toolkit-owned skill directories and deterministic tree hashes in `codex-engineering-kit.manifest.json`.
+The PowerShell installer records toolkit-owned skill directories and deterministic tree hashes in `codex-engineering-kit.manifest.json`.
 
 - unowned/conflicting targets are refused by default;
 - `-Force` backs up a conflicting target before replacement;
 - uninstall removes a skill only when its current hash still matches the installed manifest;
 - modified installed skills are preserved instead of silently deleted.
 
+Native plugin installation and the PowerShell skill-installer ownership model are separate delivery surfaces.
+
 ### Public repository vs local private state
 
 The public repository must never contain:
 
-- API keys, access tokens, or private keys;
-- real `.env` secrets;
-- project credentials;
+- API keys, access tokens, private keys, or real `.env` secrets;
+- project/provider credentials;
 - raw private session transcripts;
-- generated authentication state;
+- generated authentication/session material;
+- user-local executable, cache, home, or `CODEX_HOME` paths in committed evidence;
 - private continuous-learning observations/candidates.
 
-Local working state should remain under ignored paths such as `.codex-kit/local/` and `.codex-kit/candidates/`.
+Runtime evidence commits only bounded summaries, repository-relative references, and hashes where appropriate. Raw operator artifacts remain local.
+
+### Bounded `.codex-kit` state
+
+Runtime state under `.codex-kit` is designed to be local, ignored, bounded by schemas, and sensitivity-filtered before shared evidence is produced. State/checkpoint files are not a general transcript store and should not contain raw prompts, credentials, or unbounded tool output.
 
 ### Trusted skills vs learned candidates
 
 Continuous learning produces `pending_review` candidates only. Candidates are not automatically installed, promoted, or executed. Learned shell content is never an automatic execution source.
 
+### Custom-agent instructions are not isolation
+
+Read-only/custom-agent instructions constrain intended behavior but are not an operating-system sandbox. Repository/tool permissions and user review remain authoritative boundaries.
+
 ### Deterministic evidence vs model judgment
 
-When a condition can be verified through code, exit status, schema checks, tests, or file contracts, deterministic evidence takes priority over model judgment. Missing evidence must not be reported as success.
+When a condition can be verified through code, exit status, schema checks, tests, hashes, or file/state contracts, deterministic evidence takes priority over model judgment. Missing runtime evidence must not be promoted to PASS.
 
 ### External MCP providers
 
-MCP templates contain only secret-free requirements and login metadata. Provider authentication remains local and should use least privilege. A failed or unauthenticated optional MCP provider must not weaken unrelated toolkit safety checks.
+MCP templates contain only secret-free requirements and login metadata. Provider authentication remains local and should use least privilege. A failed or unauthenticated optional MCP provider must not weaken unrelated CEK checks.
+
+## Release evidence boundary
+
+The v0.2 release contract does not claim blanket security, feature parity, measured context efficiency, or blanket cross-platform Codex runtime compatibility. Exact claim and compatibility scopes are recorded in:
+
+- `docs/release/claim-evidence-matrix.md`;
+- `docs/release/compatibility-matrix.md`;
+- `docs/release/v0.2-rc-checklist.md`.
 
 ## Out of scope by design
 
-The v0.1 toolkit does not intentionally:
+CEK does not intentionally:
 
-- store remote telemetry;
+- store remote telemetry by default;
 - upload session transcripts;
 - execute learned candidates automatically;
-- modify user repositories autonomously without an explicit workflow/action;
-- embed provider credentials in templates.
+- embed provider credentials in templates;
+- treat hook guardrails as a security sandbox;
+- infer one runtime's behavior from another runtime's evidence.
 
-A change that adds any of these behaviors requires an explicit security design review.
+A change that adds any of these behaviors requires an explicit security design review and corresponding evidence contracts.
