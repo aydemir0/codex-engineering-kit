@@ -106,6 +106,15 @@ class PlanDContractTests(unittest.TestCase):
                             violations.append(f"{path.relative_to(REPO_ROOT)}: {root}")
         self.assertEqual(violations, [])
 
+    def test_plan_d_generated_runtime_artifacts_are_gitignored(self) -> None:
+        ignore_lines = {
+            line.strip()
+            for line in (REPO_ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        }
+        self.assertIn(".codex-kit/evals/", ignore_lines)
+        self.assertIn("__pycache__/", ignore_lines)
+
     def test_plan_d_ci_matrix_has_exact_three_os_and_required_deterministic_commands(self) -> None:
         ci_text = CI_PATH.read_text(encoding="utf-8")
         block = _job_block(ci_text, "plan-d-contracts")
