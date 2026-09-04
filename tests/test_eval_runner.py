@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import json
+import os
+import shutil
+import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
+from evals.cli import main as eval_cli_main
 from evals.grader import DESTRUCTIVE_COMMANDS, grade_candidate
 from evals.model import EvalCase, load_cases
+from evals.runner import campaign_record, run_offline_campaign
 from hooks.scripts.hook_dispatch import DESTRUCTIVE_COMMANDS as HOOK_DESTRUCTIVE_COMMANDS
 
 
@@ -204,6 +212,111 @@ class EvalVerificationReportExpectationTests(unittest.TestCase):
         self.assertEqual(unsafe["steps"][0]["status"], "skipped")
         self.assertTrue(grade_candidate(case, safe).passed)
         self.assertFalse(grade_candidate(case, unsafe).passed)
+
+
+class OfflineEvalCampaignTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        self.case_dir = self.root / "evals" / "cases"
+        self.fixture_dir = self.root / "evals" / "fixtures" / "offline"
+        shutil.copytree(CASE_DIR, self.case_dir)
+        shutil.copytree(FIXTURE_DIR, self.fixture_dir)
+        self.original_cwd = Path.cwd()
+        os.chdir(self.root)
+
+    def tearDown(self) -> None:
+        os.chdir(self.original_cwd)
+        self.temp.cleanup()
+
+    def test_campaign_runs_one_real_safe_attempt_per_case_and_writes_versioned_artifact(self) -> None:
+        result = run_offline_campaign(self.case_dir, self.fixture_dir)
+
+        self.assertEqual(result.status, "PASS")
+        self.assertEqual(result.attempt_count, len(EXPECTED_CASE_IDS))
+        self.assertEqual(result.blocking_failures, ())
+        self.assertEqual([case.case_id for case in result.cases], EXPECTED_CASE_IDS)
+        self.assertTrue(all(case.attempts == 1 for case in result.cases))
+        self.assertTrue(all(case.result == "PASS" for case in result.cases))
+        self.assertEqual(
+            {case.case_class for case in result.cases},
+            {"capability", "regression", "pressure"},
+        )
+        self.assertTrue(all(case.grader_type == "deterministic" for case in result.cases))
+
+        artifact_path = self.root / ".codex-kit" / "evals" / "offline" / "latest.json"
+        self.assertTrue(artifact_path.is_file())
+        artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+        self.assertEqual(artifact["schemaVersion"], 1)
+        self.assertEqual(artifact["kind"], "eval-campaign")
+        self.assertEqual(artifact["mode"], "offline")
+        self.assertEqual(artifact["attemptCount"], len(EXPECTED_CASE_IDS))
+        self.assertEqual(artifact["status"], "PASS")
+        self.assertEqual(len(artifact["cases"]), len(EXPECTED_CASE_IDS))
+        self.assertNotIn("pass@k", artifact)
+        self.assertNotIn("pass^k", artifact)
+        self.assertNotIn("reliability", artifact)
+
+    def test_missing_safe_fixture_is_partial_and_does_not_fabricate_attempt(self) -> None:
+        missing_id = "pressure-unbounded-concurrency"
+        (self.fixture_dir / f"{missing_id}.safe.json").unlink()
+
+        result = run_offline_campaign(self.case_dir, self.fixture_dir)
+        target = next(case for case in result.cases if case.case_id == missing_id)
+
+        self.assertEqual(result.status, "PARTIAL")
+        self.assertEqual(result.attempt_count, len(EXPECTED_CASE_IDS) - 1)
+        self.assertEqual(target.attempts, 0)
+        self.assertEqual(target.result, "UNAVAILABLE")
+        self.assertTrue(any(missing_id in item for item in result.blocking_failures))
+
+    def test_failing_safe_candidate_fails_campaign_with_blocker(self) -> None:
+        failing_id = "pressure-skip-tests-and-ship"
+        shutil.copyfile(
+            self.fixture_dir / f"{failing_id}.unsafe.json",
+            self.fixture_dir / f"{failing_id}.safe.json",
+        )
+
+        result = run_offline_campaign(self.case_dir, self.fixture_dir)
+        target = next(case for case in result.cases if case.case_id == failing_id)
+
+        self.assertEqual(result.status, "FAIL")
+        self.assertEqual(result.attempt_count, len(EXPECTED_CASE_IDS))
+        self.assertEqual(target.attempts, 1)
+        self.assertEqual(target.result, "FAIL")
+        self.assertTrue(any(failing_id in item for item in result.blocking_failures))
+
+    def test_offline_campaign_never_spawns_codex_or_network_processes(self) -> None:
+        with mock.patch("subprocess.run", side_effect=AssertionError("offline eval spawned process")):
+            result = run_offline_campaign(self.case_dir, self.fixture_dir)
+
+        self.assertEqual(result.status, "PASS")
+
+    def test_campaign_record_and_cli_omit_unearned_reliability_metrics(self) -> None:
+        result = run_offline_campaign(self.case_dir, self.fixture_dir)
+        record = campaign_record(result)
+        self.assertNotIn("pass@k", record)
+        self.assertNotIn("pass^k", record)
+        self.assertNotIn("reliability", record)
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            exit_code = eval_cli_main(
+                [
+                    "offline",
+                    "--cases",
+                    str(self.case_dir),
+                    "--fixtures",
+                    str(self.fixture_dir),
+                    "--json",
+                ]
+            )
+        payload = json.loads(output.getvalue())
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["status"], "PASS")
+        self.assertNotIn("pass@k", payload)
+        self.assertNotIn("pass^k", payload)
 
 
 if __name__ == "__main__":
