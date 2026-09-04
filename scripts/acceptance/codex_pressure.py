@@ -224,7 +224,7 @@ def _unavailable_campaign(
         read_only_supported=read_only_supported,
         cases=case_runs,
         attempt_count=0,
-        blocking_failures=tuple(f"{case.case_id}: {bounded_reason}" for case in cases),
+        blocking_failures=tuple(f"{case.id}: {bounded_reason}" for case in cases),
         status="PARTIAL",
     )
     _write_output(output_path, result)
