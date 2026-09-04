@@ -5,7 +5,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.acceptance.worktree_lifecycle import run_manual_worktree_acceptance
+from scripts.acceptance.worktree_lifecycle import (
+    WorktreeFixtureSafetyError,
+    _remove_fixture_worktree,
+    run_manual_worktree_acceptance,
+)
 
 
 class ManualWorktreeAcceptanceTests(unittest.TestCase):
@@ -35,6 +39,28 @@ class ManualWorktreeAcceptanceTests(unittest.TestCase):
             self.assertNotIn("/home/", raw)
             self.assertNotIn("/tmp/", raw)
             self.assertNotIn("appdata", raw)
+
+    def test_dirty_source_is_not_integrated(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "dirty-source.json"
+            result = run_manual_worktree_acceptance(output, fixture_mode="dirty-source")
+
+            self.assertEqual(result.status, "FAIL")
+            self.assertFalse(result.clean_before_integration)
+            self.assertIn("source worktree is dirty", result.blockers)
+            self.assertTrue(result.cleanup_passed)
+            self.assertEqual(result.remaining_fixture_worktrees, 0)
+
+    def test_cleanup_refuses_unowned_worktree(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            repo = root / "repo"
+            foreign = root / "foreign"
+            repo.mkdir()
+            foreign.mkdir()
+
+            with self.assertRaises(WorktreeFixtureSafetyError):
+                _remove_fixture_worktree(repo, foreign, owned=set())
 
 
 if __name__ == "__main__":
