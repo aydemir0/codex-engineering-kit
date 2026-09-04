@@ -66,6 +66,37 @@ Additional invariants:
 
 The raw local artifacts contain ephemeral session/turn/tool identifiers and are therefore represented here by sanitized summaries plus SHA-256 bindings rather than copied verbatim.
 
+## Isolated SessionEnd timeout follow-up
+
+A separate B5 probe then exercised the existing acceptance-only SessionEnd delay fixture with:
+
+```text
+CEK_HOOK_ACCEPTANCE=1
+CEK_HOOK_ACCEPTANCE_SESSION_END_DELAY_MS=5000
+```
+
+while the shipped SessionEnd hook remained configured with:
+
+```text
+timeout: 1
+async: false
+```
+
+The deterministic watcher observed the fixture start marker but no subsequent normal SessionEnd record within eight seconds:
+
+```text
+MARKER UTC: 10:44:20.630
+NORMAL SESSION END NOT SEEN WITHIN 8 SECONDS
+```
+
+After exit, `.codex-kit/hooks/session-end.json` did not exist. The raw timeout-probe `events.jsonl` SHA-256 was:
+
+```text
+3EF9CBDFA4A2DA12DACB5557F7FC383D65BE9323F11774F820C8425B3D04D88C
+```
+
+This differs from Windows Codex 0.147.0, where the same 5000 ms fixture completed normally despite `timeout: 1`. Full timeout evidence is recorded in `codex-desktop-0.152.0-session-end-timeout-acceptance.md`.
+
 ## Compatibility conclusion
 
 For this operator-assisted Windows campaign, Desktop bundled Codex 0.152.0 demonstrated compatibility with the CEK v0.2 plugin for:
@@ -77,8 +108,9 @@ For this operator-assisted Windows campaign, Desktop bundled Codex 0.152.0 demon
 - native custom reviewer discovery and `SubagentStart` / `SubagentStop`,
 - manual `PreCompact` / `PostCompact`,
 - post-compaction `SessionStart(source="compact")`,
-- graceful `SessionEnd` recording.
+- graceful `SessionEnd` recording,
+- enforcement of the configured SessionEnd timeout in the isolated 5000 ms delay fixture.
 
-This evidence does **not** close SessionEnd timeout-budget enforcement. The 0.147 Windows runtime already has a separately documented timeout discrepancy, and 0.152 timeout behavior requires its own isolated probe.
+The Windows 0.147.0 timeout discrepancy remains a separate version-scoped limitation and must stay explicit in the compatibility matrix/release evidence.
 
-It also does not close RISK-001: the explicit plugin-manifest `hooks` override remains untested. CEK continues to rely on the default `hooks/hooks.json` discovery path.
+This evidence still does not close RISK-001: the explicit plugin-manifest `hooks` override remains untested. CEK continues to rely on the default `hooks/hooks.json` discovery path.
