@@ -8,6 +8,13 @@ ROOT = Path(__file__).resolve().parents[1]
 AGENTS_DIR = ROOT / ".codex" / "agents"
 REVIEWER = AGENTS_DIR / "reviewer.toml"
 PROJECT_CONFIG = ROOT / ".codex" / "config.toml"
+READ_ONLY_AGENTS = {
+    "reviewer",
+    "explorer",
+    "architect",
+    "security-reviewer",
+    "docs-researcher",
+}
 CONTROLLED_WRITE_AGENTS = {
     "build-resolver",
     "e2e-runner",
@@ -45,6 +52,37 @@ class AgentContractTests(unittest.TestCase):
         self.assertIn("do not create commits", instructions)
         self.assertIn("evidence", instructions)
         self.assertIn("findings", instructions)
+
+    def test_all_read_only_agents_have_portable_identity_fields(self) -> None:
+        for name in READ_ONLY_AGENTS:
+            with self.subTest(agent=name):
+                data = self.load_toml(AGENTS_DIR / f"{name}.toml")
+                self.assertEqual(data.get("name"), name)
+                self.assertTrue(data.get("description", "").strip())
+                self.assertTrue(data.get("developer_instructions", "").strip())
+                self.assertLessEqual(len(data["description"]), 240)
+                self.assertLessEqual(len(data["developer_instructions"]), 4000)
+
+    def test_all_read_only_agents_inherit_parent_model_and_reasoning(self) -> None:
+        for name in READ_ONLY_AGENTS:
+            with self.subTest(agent=name):
+                data = self.load_toml(AGENTS_DIR / f"{name}.toml")
+                for key in (
+                    "model",
+                    "model_provider",
+                    "model_reasoning_effort",
+                    "service_tier",
+                ):
+                    self.assertNotIn(key, data)
+
+    def test_all_read_only_agents_forbid_repository_writes(self) -> None:
+        for name in READ_ONLY_AGENTS:
+            with self.subTest(agent=name):
+                data = self.load_toml(AGENTS_DIR / f"{name}.toml")
+                instructions = data["developer_instructions"].casefold()
+                self.assertIn("do not modify files", instructions)
+                self.assertIn("do not create commits", instructions)
+                self.assertIn("evidence", instructions)
 
     def test_project_agent_concurrency_is_bounded_to_four(self) -> None:
         data = self.load_toml(PROJECT_CONFIG)
@@ -87,9 +125,8 @@ class AgentContractTests(unittest.TestCase):
                 self.assertIn("verification", instructions)
 
     def test_agent_files_have_no_placeholders_or_machine_paths(self) -> None:
-        paths = [REVIEWER] + [
-            AGENTS_DIR / f"{name}.toml" for name in CONTROLLED_WRITE_AGENTS
-        ]
+        paths = [AGENTS_DIR / f"{name}.toml" for name in READ_ONLY_AGENTS]
+        paths += [AGENTS_DIR / f"{name}.toml" for name in CONTROLLED_WRITE_AGENTS]
         for path in paths:
             with self.subTest(path=path.name):
                 text = path.read_text(encoding="utf-8") if path.exists() else ""
