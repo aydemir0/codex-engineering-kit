@@ -55,6 +55,25 @@ class PluginCompatibilityTests(unittest.TestCase):
         self.assertTrue(summary.session_end)
         self.assertNotIn("private-id", json.dumps(summary.to_record()))
 
+    def test_hook_summary_accepts_shipped_event_key(self) -> None:
+        events = [
+            {"event": "SessionStart", "sessionId": "private-id"},
+            {"event": "PreToolUse", "decision": "allow", "sessionId": "private-id"},
+            {"event": "PostToolUse", "sessionId": "private-id"},
+            {"event": "PreToolUse", "decision": "deny", "fixture": "acceptance", "sessionId": "private-id"},
+            {"event": "SessionEnd", "sessionId": "private-id"},
+        ]
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "events.jsonl"
+            path.write_text("\n".join(json.dumps(item) for item in events) + "\n", encoding="utf-8")
+            summary = summarize_hook_events(path)
+        self.assertTrue(summary.session_start)
+        self.assertTrue(summary.allow_seen)
+        self.assertTrue(summary.post_tool_seen)
+        self.assertTrue(summary.deny_fixture_seen)
+        self.assertTrue(summary.session_end)
+        self.assertEqual(summary.unique_session_count, 1)
+
     def test_summarize_cli_writes_only_bounded_record(self) -> None:
         events = [
             {"eventName": "SessionStart", "sessionId": "private-id"},
