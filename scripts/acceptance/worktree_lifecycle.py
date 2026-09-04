@@ -14,6 +14,10 @@ MODE = "manual-git"
 COMMAND_TIMEOUT_SECONDS = 20.0
 
 
+class WorktreeFixtureSafetyError(RuntimeError):
+    pass
+
+
 @dataclass(frozen=True)
 class WorktreeAcceptanceResult:
     schema_version: int
@@ -53,18 +57,33 @@ def _normalized(path: Path) -> str:
     return os.path.normcase(str(path.resolve()))
 
 
-def _listed_worktrees(repo: Path) -> tuple[str, ...]:
+def _worktree_paths(repo: Path) -> tuple[Path, ...]:
     completed = _git(repo, "worktree", "list", "--porcelain")
-    paths: list[str] = []
+    paths: list[Path] = []
     for line in completed.stdout.splitlines():
         if line.startswith("worktree "):
-            paths.append(os.path.normcase(str(Path(line[9:]).resolve())))
+            paths.append(Path(line[9:]).resolve())
     return tuple(paths)
+
+
+def _listed_worktrees(repo: Path) -> tuple[str, ...]:
+    return tuple(_normalized(path) for path in _worktree_paths(repo))
 
 
 def _fixture_worktree_count(repo: Path, fixture_paths: tuple[Path, ...]) -> int:
     expected = {_normalized(path) for path in fixture_paths}
     return sum(1 for path in _listed_worktrees(repo) if path in expected)
+
+
+def _remove_fixture_worktree(repo: Path, path: Path, owned: set[Path]) -> None:
+    owned_normalized = {_normalized(item) for item in owned}
+    if _normalized(path) not in owned_normalized:
+        raise WorktreeFixtureSafetyError("refusing to remove an unowned worktree")
+    if _normalized(path) not in set(_listed_worktrees(repo)):
+        return
+    completed = _git(repo, "worktree", "remove", str(path), check=False)
+    if completed.returncode != 0:
+        raise WorktreeFixtureSafetyError("fixture worktree removal was refused")
 
 
 def acceptance_record(result: WorktreeAcceptanceResult) -> dict[str, object]:
@@ -118,7 +137,14 @@ def _failure_result(
     )
 
 
-def run_manual_worktree_acceptance(output_path: Path | str) -> WorktreeAcceptanceResult:
+def run_manual_worktree_acceptance(
+    output_path: Path | str,
+    *,
+    fixture_mode: str = "normal",
+) -> WorktreeAcceptanceResult:
+    if fixture_mode not in {"normal", "dirty-source"}:
+        raise ValueError("unsupported worktree acceptance fixture mode")
+
     output_path = Path(output_path).expanduser().resolve()
     git_version: str | None = None
 
@@ -158,6 +184,8 @@ def run_manual_worktree_acceptance(output_path: Path | str) -> WorktreeAcceptanc
         track_a = worktree_root / "a"
         track_b = worktree_root / "b"
         fixture_paths = (track_a, track_b)
+        owned = {track_a, track_b}
+        dirty_sentinel = track_a / "dirty-source-sentinel.txt"
         repo.mkdir()
         worktree_root.mkdir()
 
@@ -212,6 +240,9 @@ def run_manual_worktree_acceptance(output_path: Path | str) -> WorktreeAcceptanc
             _git(track_b, "add", "shared.txt")
             _git(track_b, "commit", "-m", "track b conflicting change")
 
+            if fixture_mode == "dirty-source":
+                dirty_sentinel.write_text("fixture dirty source\n", encoding="utf-8")
+
             clean_before_integration = (
                 _git(track_a, "status", "--porcelain").stdout.strip() == ""
                 and _git(track_b, "status", "--porcelain").stdout.strip() == ""
@@ -247,11 +278,13 @@ def run_manual_worktree_acceptance(output_path: Path | str) -> WorktreeAcceptanc
         except (OSError, RuntimeError, subprocess.TimeoutExpired):
             blockers.append("manual worktree acceptance failed")
         finally:
+            if dirty_sentinel.exists():
+                dirty_sentinel.unlink()
+
             for path in fixture_paths:
                 try:
-                    if _normalized(path) in set(_listed_worktrees(repo)):
-                        _git(repo, "worktree", "remove", str(path), check=False)
-                except (OSError, RuntimeError, subprocess.TimeoutExpired):
+                    _remove_fixture_worktree(repo, path, owned)
+                except (OSError, RuntimeError, subprocess.TimeoutExpired, WorktreeFixtureSafetyError):
                     pass
 
             try:
