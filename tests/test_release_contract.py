@@ -143,5 +143,68 @@ class ReleaseDocumentationTests(unittest.TestCase):
                 self.assertNotRegex(line, pattern)
 
 
+class PlanFStaticContractTests(unittest.TestCase):
+    def test_ci_contains_offline_plan_f_matrix(self) -> None:
+        text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        marker = "  plan-f-contracts:"
+        self.assertIn(marker, text)
+        section = text[text.index(marker):]
+        for required in (
+            "os: [ubuntu-latest, windows-latest, macos-latest]",
+            "python-version: '3.11'",
+            "python -m unittest tests.test_release_contract -v",
+            "python -m unittest tests.test_plugin_compatibility -v",
+            "python tests/validate_content.py",
+            "python -m release_contracts.cli validate --claims release_contracts/claims.json --compatibility release_contracts/compatibility.json",
+        ):
+            self.assertIn(required, section)
+        for forbidden in (
+            "codex exec",
+            "plugin marketplace add",
+            "CEK_HOOK_ACCEPTANCE",
+            "playwright",
+        ):
+            self.assertNotIn(forbidden, section)
+
+    def test_rc_decision_is_single_and_blocked_for_required_runtime_blockers(self) -> None:
+        text = (ROOT / "docs" / "release" / "v0.2-rc-checklist.md").read_text(encoding="utf-8")
+        decisions = [
+            line.strip()
+            for line in text.splitlines()
+            if line.startswith("Final RC decision: ")
+        ]
+        self.assertEqual(decisions, ["Final RC decision: BLOCKED"])
+
+        blockers: list[str] = []
+        for record in load_compatibility(COMPAT):
+            if record.surface != "desktop-parent-wait" and record.cli_0147.status != "PASS":
+                blockers.append(f"{record.surface}/cli0147={record.cli_0147.status}")
+            if record.desktop_0152.status != "PASS":
+                blockers.append(f"{record.surface}/desktop0152={record.desktop_0152.status}")
+        self.assertTrue(blockers, "expected at least one required runtime blocker")
+        self.assertNotIn("Final RC decision: READY", text)
+
+    def test_risk_001_stays_open_until_explicit_hooks_pass_both_baselines(self) -> None:
+        record = next(
+            item for item in load_compatibility(COMPAT)
+            if item.surface == "explicit-hooks"
+        )
+        dual_pass = (
+            record.cli_0147.status == "PASS"
+            and record.desktop_0152.status == "PASS"
+        )
+        text = (ROOT / "docs" / "release" / "v0.2-rc-checklist.md").read_text(encoding="utf-8")
+        if not dual_pass:
+            risk_section = text.split("## RISK-001 result", 1)[1].split("## ", 1)[0]
+            self.assertNotIn("Status: CLOSED", risk_section)
+            self.assertIn("explicit manifest", risk_section.casefold())
+
+    def test_external_repository_metadata_blocker_is_recorded(self) -> None:
+        text = (ROOT / "docs" / "release" / "v0.2-rc-checklist.md").read_text(encoding="utf-8")
+        self.assertIn("External repository metadata", text)
+        self.assertIn("Production-grade agentic software engineering toolkit for OpenAI Codex.", text)
+        self.assertIn("Evidence-bound engineering workflows for OpenAI Codex.", text)
+
+
 if __name__ == "__main__":
     unittest.main()
