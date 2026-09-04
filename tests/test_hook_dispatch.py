@@ -88,6 +88,8 @@ class HookDispatchBehaviorTests(unittest.TestCase):
             checkpoint = cwd / ".codex-kit" / "hooks" / "compact-state.json"
             self.assertTrue(checkpoint.is_file())
             state = json.loads(checkpoint.read_text(encoding="utf-8"))
+            self.assertEqual(state.get("schemaVersion"), 1)
+            self.assertEqual(state.get("kind"), "compact-checkpoint")
             self.assertEqual(state["sessionId"], "session-1")
             self.assertEqual(state["turnId"], "turn-1")
             self.assertEqual(state["trigger"], "auto")
@@ -104,6 +106,40 @@ class HookDispatchBehaviorTests(unittest.TestCase):
             context = resumed["hookSpecificOutput"]["additionalContext"]
             self.assertIn("turn-1", context)
             self.assertIn("auto", context)
+
+    def test_compact_session_start_recovers_from_corrupt_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            state_dir = cwd / ".codex-kit" / "hooks"
+            state_dir.mkdir(parents=True)
+            checkpoint = state_dir / "compact-state.json"
+            checkpoint.write_text(
+                '{"broken":"SUPER_SECRET_CORRUPT_CONTENT"',
+                encoding="utf-8",
+            )
+
+            resumed = dispatch(
+                self.payload(
+                    "SessionStart",
+                    cwd,
+                    source="compact",
+                    session_id="session-1",
+                    turn_id="turn-2",
+                )
+            )
+            context = resumed["hookSpecificOutput"]["additionalContext"]
+            recovery_path = state_dir / "state-recovery.json"
+            self.assertTrue(recovery_path.is_file())
+            recovery_text = recovery_path.read_text(encoding="utf-8")
+            recovery = json.loads(recovery_text)
+
+        self.assertIn("Codex Engineering Kit", context)
+        self.assertIn("without restored checkpoint", context)
+        self.assertEqual(recovery.get("schemaVersion"), 1)
+        self.assertEqual(recovery.get("kind"), "state-recovery")
+        self.assertEqual(recovery.get("file"), "compact-state.json")
+        self.assertEqual(recovery.get("reason"), "invalid-json")
+        self.assertNotIn("SUPER_SECRET_CORRUPT_CONTENT", recovery_text)
 
     def test_post_tool_use_records_metadata_without_raw_input_or_response(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -140,6 +176,9 @@ class HookDispatchBehaviorTests(unittest.TestCase):
             snapshot_path = cwd / ".codex-kit" / "hooks" / "session-end.json"
             self.assertTrue(snapshot_path.is_file())
             snapshot_text = snapshot_path.read_text(encoding="utf-8")
+            snapshot = json.loads(snapshot_text)
+        self.assertEqual(snapshot.get("schemaVersion"), 1)
+        self.assertEqual(snapshot.get("kind"), "session-end")
         self.assertIn("session-1", snapshot_text)
         self.assertNotIn("transcript", snapshot_text.lower())
         self.assertNotIn("C:/private", snapshot_text)
