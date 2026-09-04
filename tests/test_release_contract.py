@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import unittest
 
 from release_contracts.model import (
@@ -65,6 +66,39 @@ class ReleaseModelTests(unittest.TestCase):
         )
         errors = validate_release_data((claim,), ())
         self.assertTrue(any("repository-relative" in error for error in errors))
+
+
+class ReleaseDocumentationTests(unittest.TestCase):
+    def test_release_documents_name_both_baselines(self) -> None:
+        compatibility = (ROOT / "docs" / "release" / "compatibility-matrix.md").read_text(encoding="utf-8")
+        claims = (ROOT / "docs" / "release" / "claim-evidence-matrix.md").read_text(encoding="utf-8")
+        for text in (compatibility, claims):
+            self.assertIn("0.147.0", text)
+            self.assertIn("0.152.0", text)
+
+    def test_compatibility_document_contains_every_surface(self) -> None:
+        text = (ROOT / "docs" / "release" / "compatibility-matrix.md").read_text(encoding="utf-8")
+        for record in load_compatibility(COMPAT):
+            self.assertIn(record.surface, text)
+
+    def test_claim_document_contains_every_claim(self) -> None:
+        text = (ROOT / "docs" / "release" / "claim-evidence-matrix.md").read_text(encoding="utf-8")
+        for record in load_claims(CLAIMS):
+            self.assertIn(record.id, text)
+
+    def test_plan_f_release_markdown_is_sanitized(self) -> None:
+        paths = [
+            ROOT / "docs" / "release" / "compatibility-matrix.md",
+            ROOT / "docs" / "release" / "claim-evidence-matrix.md",
+            ROOT / "docs" / "research" / "evidence" / "codex-cli-0.147.0-plan-f-compatibility.md",
+            ROOT / "docs" / "research" / "evidence" / "codex-desktop-0.152.0-plan-f-compatibility.md",
+        ]
+        text = "\n".join(path.read_text(encoding="utf-8") for path in paths)
+        self.assertNotRegex(text, re.compile(r"\b(?:ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,})\b"))
+        self.assertNotRegex(text, re.compile(r"[A-Za-z]:\\Users\\", re.IGNORECASE))
+        self.assertNotIn("/Users/", text)
+        self.assertNotIn("/home/", text)
+        self.assertNotIn("sessionId", text)
 
 
 if __name__ == "__main__":
