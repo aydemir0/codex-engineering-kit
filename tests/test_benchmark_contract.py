@@ -178,5 +178,45 @@ class BenchmarkReportTests(unittest.TestCase):
             self.assertNotIn(forbidden, serialized)
 
 
+class PlanEStaticContractTests(unittest.TestCase):
+    def test_benchmark_documentation_contract(self) -> None:
+        path = ROOT / "docs" / "benchmark.md"
+        self.assertTrue(path.is_file(), "missing docs/benchmark.md")
+        text = path.read_text(encoding="utf-8")
+        for phrase in (
+            "A = naive always-loaded engineering instructions",
+            "B = progressive-disclosure skill routing",
+            "C = native isolated subagent delegation",
+            "5 tasks × 3 configurations × 3 repeats = 45 runs",
+            "median and range",
+            "measured",
+            "exported",
+            "estimated",
+            "no statistical significance claim from three repeats",
+        ):
+            self.assertIn(phrase, text)
+        lowered = text.casefold()
+        self.assertIn("synthetic", lowered)
+        self.assertIn("do not earn a `lean` claim", lowered)
+        self.assertIn(FIXTURE_COMMIT, text)
+
+    def test_plan_e_ci_matrix_and_commands_are_exact(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        self.assertIn("  plan-e-contracts:", workflow)
+        plan_e = workflow.split("  plan-e-contracts:", 1)[1]
+        self.assertIn("os: [ubuntu-latest, windows-latest, macos-latest]", plan_e)
+        self.assertIn("python-version: '3.11'", plan_e)
+        for command in (
+            "python -m unittest tests.test_worktree_acceptance -v",
+            "python -m unittest tests.test_domain_skills -v",
+            "python -m unittest tests.test_benchmark_contract -v",
+            "python tests/validate_content.py",
+            "python -m benchmarks.cli validate --cases benchmarks/cases --configurations benchmarks/configurations",
+        ):
+            self.assertIn(command, plan_e)
+        self.assertNotIn("codex exec", plan_e)
+        self.assertNotIn("codex_pressure", plan_e)
+
+
 if __name__ == "__main__":
     unittest.main()

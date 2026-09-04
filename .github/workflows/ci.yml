@@ -124,3 +124,24 @@ jobs:
         run: python -m unittest tests.test_plan_d_contract -v
       - name: Offline eval campaign
         run: python -m evals.cli offline --cases evals/cases --fixtures evals/fixtures/offline --json
+
+  plan-e-contracts:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Manual worktree acceptance contract
+        run: python -m unittest tests.test_worktree_acceptance -v
+      - name: Domain skill contracts
+        run: python -m unittest tests.test_domain_skills -v
+      - name: Benchmark contracts
+        run: python -m unittest tests.test_benchmark_contract -v
+      - name: Repository content contracts
+        run: python tests/validate_content.py
+      - name: Offline benchmark protocol validation
+        run: python -m benchmarks.cli validate --cases benchmarks/cases --configurations benchmarks/configurations
