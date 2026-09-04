@@ -7,6 +7,12 @@ import time
 from pathlib import Path
 from typing import Any
 
+PLUGIN_ROOT = Path(__file__).resolve().parents[2]
+if str(PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(PLUGIN_ROOT))
+
+from runtime.state import read_state, write_state
+
 SUPPORTED_EVENTS = {
     "SessionStart",
     "SessionEnd",
@@ -78,13 +84,6 @@ def _safe_identity(payload: dict[str, Any]) -> dict[str, Any]:
     return record
 
 
-def _write_json(path: Path, payload: dict[str, Any]) -> None:
-    path.write_text(
-        json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n",
-        encoding="utf-8",
-    )
-
-
 def _append_event(payload: dict[str, Any], **extra: Any) -> None:
     record = _safe_identity(payload)
     record.update(extra)
@@ -127,23 +126,39 @@ def _acceptance_session_end_delay_ms() -> int:
     return min(max(delay_ms, 0), MAX_ACCEPTANCE_SESSION_END_DELAY_MS)
 
 
+def _record_state_recovery(payload: dict[str, Any], filename: str, reason: str) -> None:
+    write_state(
+        _state_dir(payload) / "state-recovery.json",
+        "state-recovery",
+        {
+            "file": filename,
+            "reason": reason,
+        },
+    )
+
+
 def _session_start(payload: dict[str, Any]) -> dict[str, Any]:
     context = "Codex Engineering Kit lifecycle hooks are active for this workspace."
     if payload.get("source") == "compact":
         compact_path = _state_dir(payload) / "compact-state.json"
-        if compact_path.is_file():
-            try:
-                compact_state = json.loads(compact_path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                compact_state = None
-            if isinstance(compact_state, dict):
-                prior_turn = compact_state.get("turnId")
-                trigger = compact_state.get("trigger")
-                if isinstance(prior_turn, str) and isinstance(trigger, str):
-                    context += (
-                        f" Resuming after compaction from turn {prior_turn} "
-                        f"(trigger {trigger})."
-                    )
+        compact_state, recovery_reason = read_state(
+            compact_path,
+            "compact-checkpoint",
+        )
+        if recovery_reason:
+            _record_state_recovery(payload, compact_path.name, recovery_reason)
+            context += (
+                " Previous compact checkpoint was invalid; continuing without restored "
+                "checkpoint."
+            )
+        elif isinstance(compact_state, dict):
+            prior_turn = compact_state.get("turnId")
+            trigger = compact_state.get("trigger")
+            if isinstance(prior_turn, str) and isinstance(trigger, str):
+                context += (
+                    f" Resuming after compaction from turn {prior_turn} "
+                    f"(trigger {trigger})."
+                )
     context = context[:MAX_CONTEXT_CHARS]
     _append_event(payload)
     return {
@@ -170,7 +185,11 @@ def _session_end(payload: dict[str, Any]) -> dict[str, Any]:
         for key, value in _safe_identity(payload).items()
         if key in {"event", "sessionId", "turnId"}
     }
-    _write_json(_state_dir(payload) / "session-end.json", snapshot)
+    write_state(
+        _state_dir(payload) / "session-end.json",
+        "session-end",
+        snapshot,
+    )
     _append_event(payload)
     return {}
 
@@ -208,7 +227,11 @@ def _pre_compact(payload: dict[str, Any]) -> dict[str, Any]:
         "turnId": payload.get("turn_id"),
         "trigger": payload.get("trigger"),
     }
-    _write_json(_state_dir(payload) / "compact-state.json", checkpoint)
+    write_state(
+        _state_dir(payload) / "compact-state.json",
+        "compact-checkpoint",
+        checkpoint,
+    )
     _append_event(payload)
     return {}
 
