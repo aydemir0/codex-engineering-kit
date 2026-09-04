@@ -146,6 +146,26 @@ Produces:
 
 Exit gate: every v0.2 public claim points to CI, benchmark, local acceptance, or an explicit limitation.
 
+**Implementation evidence gate status: CLOSED AT PROVEN BOUNDARY (2026-09-05), contingent only on the fresh closure-head CI required by the Task 7 procedure.** The deterministic implementation candidate is `20c5b823046afb08e228aebf2c1aab6d7d4fe790`; CI run #161 (`33926826258`) completed successfully on that exact SHA with all eleven required jobs green: `content-contracts`, `powershell-contracts`, the three Plan D jobs, the three Plan E jobs, and the three Plan F jobs.
+
+Plan F closure evidence is intentionally distinct from RC readiness:
+
+- `docs/research/evidence/codex-cli-0.147.0-plan-f-compatibility.md` records bounded CLI 0.147.0 results and blockers without transferring evidence to another runtime;
+- `docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md` records the Desktop 0.152.0 campaign as BLOCKED in the available execution harness rather than fabricating PASS;
+- `docs/release/compatibility-matrix.md` and `docs/release/claim-evidence-matrix.md` project the machine-readable release state into evidence-bound public wording;
+- `docs/release/v0.2-rc-checklist.md` records `Final RC decision: BLOCKED` because required runtime and external public-metadata gates remain unresolved;
+- RISK-001 remains OPEN/BLOCKED because `explicit-hooks` is not PASS on both declared baselines; the primary `.codex-plugin/plugin.json` still omits an explicit `hooks` field;
+- RISK-002 remains OPEN because Desktop 0.152.0 required surfaces are blocked and CLI PASS evidence is not promoted across versions;
+- the Codex CLI 0.147.0 SessionEnd timeout-budget discrepancy remains OPEN/BLOCKED;
+- the Desktop 0.152.0 parent-wait observation remains OPEN/BLOCKED and unclassified; no root cause is asserted;
+- interactive plugin discovery remains BLOCKED where the declared runtime surface could not be exercised;
+- the GitHub repository description remains an external manual blocker because it still uses a broader `Production-grade...` claim and the connected App does not expose repository-metadata administration writes;
+- no real authenticated 45-run context-efficiency campaign was executed, so no measured `lean`, token-savings, or context-efficiency result is claimed;
+- `main` was not merged;
+- no public v0.2 release was published.
+
+The Plan F delta from design-base `f599163f4ab71211913bdc4dc2564e9d241d7a61` through Task 6 was audited in context. Secret/path/session-identifier/unsupported-claim matches are limited to rejection fixtures, sanitization tests, design prohibition prose, or the explicitly recorded external-metadata blocker; no real committed credential or machine-local user path was promoted as release evidence. Closure does not upgrade the RC decision.
+
 ---
 
 ## Dependency order
