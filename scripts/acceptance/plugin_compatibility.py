@@ -117,7 +117,7 @@ def summarize_hook_events(path: Path) -> HookEventSummary:
         if isinstance(session_id, str) and session_id:
             session_ids.add(session_id)
 
-        event_name = event.get("eventName")
+        event_name = event.get("event") or event.get("eventName")
         if event_name == "SessionStart":
             session_start = True
         elif event_name == "PreToolUse":
