@@ -26,6 +26,27 @@ Current v0.2 limitations remain explicit:
 - the prior Desktop parent-wait observation remains unclassified;
 - the real authenticated 45-run benchmark campaign has not been completed, so no measured context-efficiency result is claimed.
 
+## v1.0 — OpenAI-ready Codex-native engineering system
+
+v1.0 is an evidence-gated program, not a catalog-size target. The approved architecture and execution program are:
+
+- [`docs/superpowers/specs/2026-09-05-v1-openai-ready-product-architecture-design.md`](docs/superpowers/specs/2026-09-05-v1-openai-ready-product-architecture-design.md)
+- [`docs/superpowers/plans/2026-09-05-v1-openai-ready-master.md`](docs/superpowers/plans/2026-09-05-v1-openai-ready-master.md)
+
+The workstreams close in this order:
+
+1. truth surface reconciliation;
+2. runtime closure;
+3. core workflow hardening;
+4. security hardening;
+5. skill/agent stocktake;
+6. authenticated 45-run benchmark;
+7. clean-install UX;
+8. OpenAI-ready presentation;
+9. exact-SHA/provenance v1.0 release gate.
+
+A workstream is complete only when its tests/evidence pass. v1.0 is not release-ready merely because the roadmap item exists.
+
 ## Next release-readiness work
 
 - execute the exact Desktop 0.152.0 compatibility campaign in a suitable operator environment;
