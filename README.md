@@ -27,6 +27,11 @@ Source-of-truth release documents:
 - [`docs/benchmark.md`](docs/benchmark.md) — fixed benchmark protocol and reporting boundary;
 - [`SECURITY.md`](SECURITY.md) — trust, secret, hook, and local-state boundaries.
 
+## Architecture and roadmap
+
+- [`docs/architecture.md`](docs/architecture.md) — current implemented architecture vs approved v1 target;
+- [`ROADMAP.md`](ROADMAP.md) — evidence-gated v0.2/v1 workstreams.
+
 ## What v0.2 contains
 
 | Capability | Evidence-bound status |
