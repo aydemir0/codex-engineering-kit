@@ -152,7 +152,7 @@ Expected: PASS on sanitized repository evidence.
 
 **Files:**
 - Modify: `tests/test_hook_dispatch.py`
-- Modify: state-focused tests or create `tests/test_state_contract.py`
+- Create: `tests/test_state_contract.py`
 - Modify only if RED exposes a defect: `hooks/scripts/hook_dispatch.py`, `runtime/state.py`
 
 **Interfaces:**
@@ -162,15 +162,24 @@ Expected: PASS on sanitized repository evidence.
 
 Tests must feed event payloads containing fake `sessionId`, bearer/token-like values, and irrelevant nested prompt content, then assert persisted evidence/state contains only the bounded fields required by CEK behavior.
 
-- [ ] **Step 2: Add state-schema RED tests**
+- [ ] **Step 2: Create state-schema RED tests**
 
-Test current schema load/save plus an unknown future schema value. Unknown/incompatible schema must return a bounded error/status rather than silently treating the record as valid current state.
+`tests/test_state_contract.py` must test current schema load/save plus an unknown future schema value. Unknown/incompatible schema must return a bounded error/status rather than silently treating the record as valid current state.
 
-- [ ] **Step 3: Implement minimal fixes only if RED reproduces an actual defect**
+- [ ] **Step 3: Run RED**
+
+```bash
+python -m unittest tests.test_hook_dispatch -v
+python -m unittest tests.test_state_contract -v
+```
+
+Expected: new security cases fail only where current behavior is insufficient.
+
+- [ ] **Step 4: Implement minimal fixes only if RED reproduces an actual defect**
 
 Do not redesign the state system if current code already satisfies the new tests.
 
-- [ ] **Step 4: Run GREEN**
+- [ ] **Step 5: Run GREEN**
 
 ```bash
 python -m unittest tests.test_hook_dispatch -v
@@ -264,6 +273,7 @@ Critical/high findings block this workstream until fixed and regression-tested. 
 ```bash
 python -m unittest tests.test_security_contract -v
 python -m unittest tests.test_hook_dispatch -v
+python -m unittest tests.test_state_contract -v
 python -m unittest tests.test_package_manager -v
 python tests/validate_content.py
 git status --short
@@ -276,4 +286,4 @@ Expected: PASS, clean tree, exact reviewed SHA.
 
 ## Completion Criteria
 
-Security hardening closes when the threat model covers all required families, public evidence passes secret/path sanitization, hook/state boundaries have regression tests, installer/learning safety tests pass, CI provenance is pinned/attributed, no critical/high finding remains open, and residual risks are explicit.
+Security hardening closes when the threat model covers all required families, public evidence passes secret/path sanitization, hook/state boundaries have explicit regression tests, installer/learning safety tests pass, CI provenance is pinned/attributed, no critical/high finding remains open, and residual risks are explicit.
