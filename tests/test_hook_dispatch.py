@@ -1,0 +1,238 @@
+from __future__ import annotations
+
+import json
+import os
+import tempfile
+import time
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+
+from hooks.scripts.hook_dispatch import dispatch
+
+
+class HookDispatchBehaviorTests(unittest.TestCase):
+    def payload(self, event: str, cwd: Path, **extra: object) -> dict[str, object]:
+        base: dict[str, object] = {
+            "hook_event_name": event,
+            "session_id": "session-1",
+            "turn_id": "turn-1",
+            "cwd": str(cwd),
+        }
+        base.update(extra)
+        return base
+
+    def test_pre_tool_use_allows_normal_command(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = dispatch(
+                self.payload(
+                    "PreToolUse",
+                    Path(tmp),
+                    tool_name="Bash",
+                    tool_use_id="tool-1",
+                    tool_input={"command": "git status"},
+                )
+            )
+        self.assertEqual(result, {})
+
+    def test_pre_tool_use_denies_narrow_destructive_root_delete(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = dispatch(
+                self.payload(
+                    "PreToolUse",
+                    Path(tmp),
+                    tool_name="Bash",
+                    tool_use_id="tool-2",
+                    tool_input={"command": "rm -rf /"},
+                )
+            )
+        specific = result["hookSpecificOutput"]
+        self.assertEqual(specific["hookEventName"], "PreToolUse")
+        self.assertEqual(specific["permissionDecision"], "deny")
+        self.assertIn("destructive", specific["permissionDecisionReason"].lower())
+
+    def test_pre_tool_use_denies_safe_acceptance_sentinel_only_in_acceptance_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            payload = self.payload(
+                "PreToolUse",
+                Path(tmp),
+                tool_name="Bash",
+                tool_use_id="tool-safe-deny",
+                tool_input={"command": "echo CEK_HOOK_DENY_FIXTURE"},
+            )
+            with patch.dict(os.environ, {"CEK_HOOK_ACCEPTANCE": "1"}, clear=False):
+                result = dispatch(payload)
+            without_mode = dispatch(payload)
+
+        self.assertEqual(
+            result["hookSpecificOutput"]["permissionDecision"],
+            "deny",
+        )
+        self.assertIn(
+            "acceptance",
+            result["hookSpecificOutput"]["permissionDecisionReason"].lower(),
+        )
+        self.assertEqual(without_mode, {})
+
+    def test_session_start_emits_bounded_context(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            result = dispatch(self.payload("SessionStart", Path(tmp), source="startup"))
+        context = result["hookSpecificOutput"]["additionalContext"]
+        self.assertLessEqual(len(context), 6000)
+        self.assertIn("Codex Engineering Kit", context)
+
+    def test_precompact_to_compact_session_start_round_trip(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            dispatch(self.payload("PreCompact", cwd, trigger="auto"))
+            checkpoint = cwd / ".codex-kit" / "hooks" / "compact-state.json"
+            self.assertTrue(checkpoint.is_file())
+            state = json.loads(checkpoint.read_text(encoding="utf-8"))
+            self.assertEqual(state.get("schemaVersion"), 1)
+            self.assertEqual(state.get("kind"), "compact-checkpoint")
+            self.assertEqual(state["sessionId"], "session-1")
+            self.assertEqual(state["turnId"], "turn-1")
+            self.assertEqual(state["trigger"], "auto")
+
+            resumed = dispatch(
+                self.payload(
+                    "SessionStart",
+                    cwd,
+                    source="compact",
+                    session_id="session-1",
+                    turn_id="turn-2",
+                )
+            )
+            context = resumed["hookSpecificOutput"]["additionalContext"]
+            self.assertIn("turn-1", context)
+            self.assertIn("auto", context)
+
+    def test_compact_session_start_recovers_from_corrupt_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            state_dir = cwd / ".codex-kit" / "hooks"
+            state_dir.mkdir(parents=True)
+            checkpoint = state_dir / "compact-state.json"
+            checkpoint.write_text(
+                '{"broken":"SUPER_SECRET_CORRUPT_CONTENT"',
+                encoding="utf-8",
+            )
+
+            resumed = dispatch(
+                self.payload(
+                    "SessionStart",
+                    cwd,
+                    source="compact",
+                    session_id="session-1",
+                    turn_id="turn-2",
+                )
+            )
+            context = resumed["hookSpecificOutput"]["additionalContext"]
+            recovery_path = state_dir / "state-recovery.json"
+            self.assertTrue(recovery_path.is_file())
+            recovery_text = recovery_path.read_text(encoding="utf-8")
+            recovery = json.loads(recovery_text)
+
+        self.assertIn("Codex Engineering Kit", context)
+        self.assertIn("without restored checkpoint", context)
+        self.assertEqual(recovery.get("schemaVersion"), 1)
+        self.assertEqual(recovery.get("kind"), "state-recovery")
+        self.assertEqual(recovery.get("file"), "compact-state.json")
+        self.assertEqual(recovery.get("reason"), "invalid-json")
+        self.assertNotIn("SUPER_SECRET_CORRUPT_CONTENT", recovery_text)
+
+    def test_post_tool_use_records_metadata_without_raw_input_or_response(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            dispatch(
+                self.payload(
+                    "PostToolUse",
+                    cwd,
+                    tool_name="Bash",
+                    tool_use_id="tool-3",
+                    tool_input={"command": "echo SUPER_SECRET_VALUE"},
+                    tool_response={"output": "SUPER_SECRET_RESPONSE"},
+                )
+            )
+            evidence = (cwd / ".codex-kit" / "hooks" / "events.jsonl").read_text(
+                encoding="utf-8"
+            )
+        self.assertIn("PostToolUse", evidence)
+        self.assertIn("tool-3", evidence)
+        self.assertNotIn("SUPER_SECRET_VALUE", evidence)
+        self.assertNotIn("SUPER_SECRET_RESPONSE", evidence)
+
+    def test_session_end_writes_cheap_snapshot_without_transcript(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            dispatch(
+                self.payload(
+                    "SessionEnd",
+                    cwd,
+                    reason="normal",
+                    transcript_path="C:/private/transcript.jsonl",
+                )
+            )
+            snapshot_path = cwd / ".codex-kit" / "hooks" / "session-end.json"
+            self.assertTrue(snapshot_path.is_file())
+            snapshot_text = snapshot_path.read_text(encoding="utf-8")
+            snapshot = json.loads(snapshot_text)
+        self.assertEqual(snapshot.get("schemaVersion"), 1)
+        self.assertEqual(snapshot.get("kind"), "session-end")
+        self.assertIn("session-1", snapshot_text)
+        self.assertNotIn("transcript", snapshot_text.lower())
+        self.assertNotIn("C:/private", snapshot_text)
+
+    def test_session_end_timeout_fixture_delays_and_marks_acceptance_run(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            with patch.dict(
+                os.environ,
+                {
+                    "CEK_HOOK_ACCEPTANCE": "1",
+                    "CEK_HOOK_ACCEPTANCE_SESSION_END_DELAY_MS": "75",
+                },
+                clear=False,
+            ):
+                started = time.perf_counter()
+                dispatch(self.payload("SessionEnd", cwd))
+                elapsed = time.perf_counter() - started
+            evidence = (cwd / ".codex-kit" / "hooks" / "events.jsonl").read_text(
+                encoding="utf-8"
+            )
+
+        self.assertGreaterEqual(elapsed, 0.05)
+        self.assertIn('"fixture":"session-end-timeout"', evidence)
+        self.assertIn('"phase":"started"', evidence)
+
+    def test_subagent_lifecycle_records_bounded_identity_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cwd = Path(tmp)
+            dispatch(
+                self.payload(
+                    "SubagentStart",
+                    cwd,
+                    agent_id="agent-1",
+                    agent_type="reviewer",
+                    transcript_path="C:/private/subagent.jsonl",
+                )
+            )
+            dispatch(
+                self.payload(
+                    "SubagentStop",
+                    cwd,
+                    agent_id="agent-1",
+                    agent_type="reviewer",
+                    stop_hook_active=True,
+                )
+            )
+            evidence = (cwd / ".codex-kit" / "hooks" / "events.jsonl").read_text(
+                encoding="utf-8"
+            )
+        self.assertIn("agent-1", evidence)
+        self.assertIn("reviewer", evidence)
+        self.assertNotIn("C:/private", evidence)
+
+
+if __name__ == "__main__":
+    unittest.main()

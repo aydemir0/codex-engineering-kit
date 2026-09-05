@@ -1,60 +1,59 @@
 # Roadmap
 
-Codex Engineering Kit is intentionally small in v0.1. The roadmap prioritizes stronger evidence and portability before adding more active skills.
+Codex Engineering Kit prioritizes evidence and bounded compatibility over expanding claims. The v0.2 branch is an evidence-bound alpha/release-candidate workstream, not a completed public release.
 
 ## v0.1 — Engineering foundation
 
-- lean six-skill catalog;
-- orchestrator with focused role references;
-- repository-first software architecture guidance;
-- concurrency/performance evidence discipline;
-- deterministic verification runner;
-- capability/regression eval workflow;
-- review-gated continuous learning;
-- idempotent Windows PowerShell installer/update/uninstall;
-- secret-free MCP provider metadata;
-- CI for content and PowerShell contracts;
-- public architecture/security/contribution documentation.
+The original foundation established repository-first architecture guidance, verification/eval workflows, review-gated learning, PowerShell installer ownership rules, secret-free MCP metadata, and deterministic content/behavior contracts.
 
-## v0.2 — Cross-platform installation
+## v0.2 — Native Codex engineering kit + release evidence
 
-- Linux installer parity;
-- macOS installer parity;
-- shared manifest/ownership contract across platforms;
-- cross-platform CI matrix;
-- platform-specific path and shell safety tests.
+Implemented or evidence-tracked slices:
 
-## v0.3 — Verification adapters
+- **native plugin + marketplace** — `.codex-plugin/plugin.json` and repo-local marketplace integration;
+- **runtime + hooks** — native `hooks/hooks.json`, bounded dispatcher behavior, and explicit-manifest compatibility experiment tooling;
+- **custom subagents + state/compaction** — project-local agents, versioned bounded state, compaction continuation, and corruption recovery;
+- **verification + evals** — verification engine, deterministic eval graders, authenticated-pressure helper, and evidence-oriented readiness semantics;
+- **manual worktree + domain packs + benchmark protocol** — deterministic Git-worktree acceptance, backend/frontend pattern skills, and fixed A/B/C context benchmark protocol;
+- **release evidence + compatibility** — machine-readable claims/compatibility data, human-readable matrices, public-claim boundaries, and RC gates.
 
-- richer project command discovery;
-- explicit adapters for common Python/Node build systems;
-- configurable required/optional gates;
-- structured verification artifacts;
-- safer dependency/security scanner integration when tools are present.
+Current v0.2 limitations remain explicit:
 
-## v0.4 — Evals and checkpoints
+- Desktop bundled Codex 0.152.0 Plan F acceptance is blocked in the current execution harness;
+- RISK-001 explicit manifest hooks override is not proven on both declared baselines;
+- RISK-002 runtime skew remains open;
+- CLI 0.147.0 SessionEnd timeout-budget classification remains unresolved;
+- the prior Desktop parent-wait observation remains unclassified;
+- the real authenticated 45-run benchmark campaign has not been completed, so no measured context-efficiency result is claimed.
 
-- reusable deterministic eval adapters;
-- richer baseline comparison;
-- checkpoint schema and validation;
-- explicit session handoff tooling;
-- reproducible examples for agent reliability measurements.
+## Next release-readiness work
 
-## Later exploration
+- execute the exact Desktop 0.152.0 compatibility campaign in a suitable operator environment;
+- execute explicit-manifest hook acceptance on both declared baselines;
+- rerun and classify the SessionEnd timeout behavior;
+- rerun the bounded Desktop parent-wait case without assigning a root cause in advance;
+- complete release metadata/public-surface audit;
+- obtain fresh exact-head Plan F CI and close only the proven implementation gate;
+- publish a release only after the RC checklist permits it.
 
-- broader MCP setup validation;
-- reusable project presets without embedding secrets;
+## Future work
+
+- real authenticated context benchmark campaign and evidence-backed performance reporting;
+- broader version-by-version Codex compatibility coverage;
+- Linux/macOS installer parity where the installer ownership contract can be preserved and tested;
+- richer verification adapters for additional project ecosystems;
 - signed/reproducible release artifacts;
-- opt-in skill packaging/distribution;
-- integration tests against future Codex capabilities when officially available.
+- broader MCP setup validation without embedding credentials;
+- public release packaging/distribution after release evidence is complete.
 
 ## Non-goals unless the architecture changes
 
-The project does not currently plan to prioritize:
+The project does not prioritize:
 
-- a huge marketplace of overlapping active skills;
-- pretending another coding agent's hook API exists in Codex;
+- a large marketplace of overlapping always-loaded skills;
+- representing another coding agent's lifecycle API as Codex behavior;
 - remote telemetry by default;
 - silent promotion of learned session output;
 - autonomous destructive changes to user repositories;
-- storing integration credentials in repository configuration.
+- storing integration credentials in repository configuration;
+- claiming runtime compatibility or performance results that were not actually measured.

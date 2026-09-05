@@ -1,0 +1,35 @@
+{
+  "name": "codex-engineering-kit",
+  "version": "0.2.0-alpha.1",
+  "description": "Evidence-bound engineering workflows for OpenAI Codex.",
+  "author": {
+    "name": "aydemir0",
+    "url": "https://github.com/aydemir0"
+  },
+  "homepage": "https://github.com/aydemir0/codex-engineering-kit",
+  "repository": "https://github.com/aydemir0/codex-engineering-kit",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "engineering",
+    "verification",
+    "evals"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Engineering Kit",
+    "shortDescription": "Evidence-bound engineering workflows for Codex",
+    "longDescription": "Reusable Codex engineering workflows for architecture, verification, evals, review-gated learning, security, and performance work.",
+    "developerName": "aydemir0",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive"
+    ],
+    "websiteURL": "https://github.com/aydemir0/codex-engineering-kit",
+    "defaultPrompt": [
+      "Review this repository with evidence-first engineering.",
+      "Verify this change before calling it release-ready.",
+      "Plan this feature using the repository's real constraints."
+    ]
+  }
+}

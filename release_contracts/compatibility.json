@@ -1,0 +1,64 @@
+{
+  "compatibility": [
+    {
+      "surface": "plugin-discovery",
+      "cli0147": {"status": "PASS", "evidence": ["docs/research/evidence/codex-cli-0.147.0-plugin-acceptance.md"], "limitation": ""},
+      "desktop0152": {"status": "BLOCKED", "evidence": ["docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md"], "limitation": "Exact Desktop 0.152.0 runtime is unavailable in the Plan F execution harness."}
+    },
+    {
+      "surface": "marketplace-install-list",
+      "cli0147": {"status": "PASS", "evidence": ["docs/research/evidence/codex-cli-0.147.0-plugin-acceptance.md"], "limitation": ""},
+      "desktop0152": {"status": "BLOCKED", "evidence": ["docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md"], "limitation": "Exact Desktop 0.152.0 runtime is unavailable in the Plan F execution harness."}
+    },
+    {
+      "surface": "skill-discovery",
+      "cli0147": {"status": "BLOCKED", "evidence": ["docs/research/evidence/codex-cli-0.147.0-plan-f-compatibility.md"], "limitation": "No committed 0.147.0 artifact directly proves this surface and the exact runtime is unavailable for a fresh Plan F check."},
+      "desktop0152": {"status": "BLOCKED", "evidence": ["docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md"], "limitation": "Exact Desktop 0.152.0 runtime is unavailable in the Plan F execution harness."}
+    },
+    {
+      "surface": "default-hooks",
+      "cli0147": {"status": "PASS", "evidence": ["docs/research/evidence/codex-cli-0.147.0-hook-acceptance.md"], "limitation": ""},
+      "desktop0152": {"status": "BLOCKED", "evidence": ["docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md"], "limitation": "Exact Desktop 0.152.0 runtime is unavailable in the Plan F execution harness."}
+    },
+    {
+      "surface": "explicit-hooks",
+      "cli0147": {"status": "BLOCKED", "evidence": ["docs/research/evidence/codex-cli-0.147.0-plan-f-compatibility.md"], "limitation": "RISK-001 explicit manifest hook override could not be launched because the exact CLI 0.147.0 binary is unavailable."},
+      "desktop0152": {"status": "BLOCKED", "evidence": ["docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md"], "limitation": "RISK-001 explicit manifest hook override could not be launched because Desktop 0.152.0 is unavailable."}
+    },
+    {
+      "surface": "hook-lifecycle",
+      "cli0147": {"status": "PASS", "evidence": ["docs/research/evidence/codex-cli-0.147.0-hook-acceptance.md", "docs/research/evidence/codex-cli-0.147.0-plan-c-state-subagent-acceptance.md"], "limitation": ""},
+      "desktop0152": {"status": "BLOCKED", "evidence": ["docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md"], "limitation": "Exact Desktop 0.152.0 runtime is unavailable in the Plan F execution harness."}
+    },
+    {
+      "surface": "pretool-deny-allow",
+      "cli0147": {"status": "PASS", "evidence": ["docs/research/evidence/codex-cli-0.147.0-hook-acceptance.md"], "limitation": ""},
+      "desktop0152": {"status": "BLOCKED", "evidence": ["docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md"], "limitation": "Exact Desktop 0.152.0 runtime is unavailable in the Plan F execution harness."}
+    },
+    {
+      "surface": "native-subagent",
+      "cli0147": {"status": "PASS", "evidence": ["docs/research/evidence/codex-cli-0.147.0-plan-c-state-subagent-acceptance.md"], "limitation": ""},
+      "desktop0152": {"status": "BLOCKED", "evidence": ["docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md"], "limitation": "Exact Desktop 0.152.0 runtime is unavailable in the Plan F execution harness."}
+    },
+    {
+      "surface": "compaction-state",
+      "cli0147": {"status": "PASS", "evidence": ["docs/research/evidence/codex-cli-0.147.0-plan-c-state-subagent-acceptance.md"], "limitation": ""},
+      "desktop0152": {"status": "BLOCKED", "evidence": ["docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md"], "limitation": "Exact Desktop 0.152.0 runtime is unavailable in the Plan F execution harness."}
+    },
+    {
+      "surface": "session-end",
+      "cli0147": {"status": "BLOCKED", "evidence": ["docs/research/evidence/codex-cli-0.147.0-plan-f-compatibility.md"], "limitation": "Historical graceful SessionEnd execution exists, but the 0.147.0 timeout-budget discrepancy cannot be rerun in this harness."},
+      "desktop0152": {"status": "BLOCKED", "evidence": ["docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md"], "limitation": "Exact Desktop 0.152.0 runtime is unavailable in the Plan F execution harness."}
+    },
+    {
+      "surface": "interactive-plugin-discovery",
+      "cli0147": {"status": "BLOCKED", "evidence": ["docs/research/evidence/codex-cli-0.147.0-plan-f-compatibility.md"], "limitation": "No exact-runtime interactive surface is available in the Plan F execution harness."},
+      "desktop0152": {"status": "BLOCKED", "evidence": ["docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md"], "limitation": "Desktop 0.152.0 interactive UI is unavailable in the Plan F execution harness."}
+    },
+    {
+      "surface": "desktop-parent-wait",
+      "cli0147": {"status": "NOT_RUN", "evidence": [], "limitation": "Desktop-specific surface; deliberately not applicable to the CLI baseline."},
+      "desktop0152": {"status": "BLOCKED", "evidence": ["docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md"], "limitation": "Bounded Desktop reviewer rerun is unavailable; prior parent-wait observation remains unclassified."}
+    }
+  ]
+}

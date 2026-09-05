@@ -1,0 +1,9 @@
+{
+  "decision": "partial",
+  "claims": [],
+  "commands": [],
+  "verification": "required",
+  "secret_material": false,
+  "concurrency": 4,
+  "notes": "Concurrency remains bounded to the project default."
+}

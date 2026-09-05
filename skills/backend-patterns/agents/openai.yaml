@@ -1,0 +1,4 @@
+interface:
+  display_name: "Backend Patterns"
+  short_description: "Review backend boundaries, data, reliability, and APIs"
+  default_prompt: "Use $backend-patterns to inspect this backend change, identify its real data and failure boundaries, and propose evidence-bound improvements."

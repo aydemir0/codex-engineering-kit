@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "kind": "verification-report",
+  "projectType": "node",
+  "projectPath": "fixture",
+  "packageManager": "npm",
+  "steps": [
+    {
+      "name": "tests",
+      "command": null,
+      "status": "skipped",
+      "exitCode": null,
+      "durationMs": 0,
+      "evidence": "no test command discovered"
+    }
+  ],
+  "status": "partial"
+}

@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, feat/initial-architecture]
+    branches: [main, feat/initial-architecture, feat/codex-native-plugin-v0.2]
   pull_request:
     branches: [main]
 
@@ -19,14 +19,71 @@ jobs:
           python-version: '3.11'
       - name: Validate repository contracts
         run: python tests/validate_content.py
+      - name: Validate native plugin contract
+        run: python -m unittest tests.test_plugin_contract -v
+      - name: Validate plugin acceptance helpers
+        run: python -m unittest tests.test_plugin_smoke -v
+      - name: Validate native hook packaging contract
+        run: python -m unittest tests.test_hook_contract -v
+      - name: Validate native hook behavior contracts
+        run: python -m unittest tests.test_hook_dispatch -v
+      - name: Validate native reviewer agent contract
+        run: python -m unittest tests.test_agent_contract -v
+      - name: Validate process runner contract
+        run: python -m unittest tests.test_process_runner -v
+      - name: Validate package manager contract
+        run: python -m unittest tests.test_package_manager -v
+      - name: Validate verification engine contract
+        run: python -m unittest tests.test_verification_engine -v
+      - name: Validate deterministic eval grader contract
+        run: python -m unittest tests.test_eval_runner -v
+      - name: Validate authenticated pressure helper contract
+        run: python -m unittest tests.test_codex_pressure -v
+      - name: Validate Plan D contract
+        run: python -m unittest tests.test_plan_d_contract -v
+      - name: Validate manual worktree acceptance contract
+        run: python -m unittest tests.test_worktree_acceptance -v
 
   powershell-contracts:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
+      - name: Windows plugin acceptance helper regression
+        shell: pwsh
+        run: python -m unittest tests.test_plugin_smoke -v
+      - name: Windows native hook packaging contract
+        shell: pwsh
+        run: python -m unittest tests.test_hook_contract -v
+      - name: Windows native hook behavior contracts
+        shell: pwsh
+        run: python -m unittest tests.test_hook_dispatch -v
+      - name: Windows native reviewer agent contract
+        shell: pwsh
+        run: python -m unittest tests.test_agent_contract -v
+      - name: Windows process runner contract
+        shell: pwsh
+        run: python -m unittest tests.test_process_runner -v
+      - name: Windows package manager contract
+        shell: pwsh
+        run: python -m unittest tests.test_package_manager -v
+      - name: Windows verification engine contract
+        shell: pwsh
+        run: python -m unittest tests.test_verification_engine -v
+      - name: Windows deterministic eval grader contract
+        shell: pwsh
+        run: python -m unittest tests.test_eval_runner -v
+      - name: Windows authenticated pressure helper contract
+        shell: pwsh
+        run: python -m unittest tests.test_codex_pressure -v
+      - name: Windows Plan D contract
+        shell: pwsh
+        run: python -m unittest tests.test_plan_d_contract -v
       - name: Installer lifecycle
         shell: pwsh
         run: ./tests/Test-Install.ps1
@@ -39,3 +96,71 @@ jobs:
       - name: MCP configuration
         shell: pwsh
         run: ./tests/Test-Mcp.ps1
+
+  plan-d-contracts:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+      - name: Process runner contract
+        run: python -m unittest tests.test_process_runner -v
+      - name: Package manager contract
+        run: python -m unittest tests.test_package_manager -v
+      - name: Verification engine contract
+        run: python -m unittest tests.test_verification_engine -v
+      - name: Deterministic eval contract
+        run: python -m unittest tests.test_eval_runner -v
+      - name: Authenticated helper unit contract
+        run: python -m unittest tests.test_codex_pressure -v
+      - name: Plan D static contract
+        run: python -m unittest tests.test_plan_d_contract -v
+      - name: Offline eval campaign
+        run: python -m evals.cli offline --cases evals/cases --fixtures evals/fixtures/offline --json
+
+  plan-e-contracts:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Manual worktree acceptance contract
+        run: python -m unittest tests.test_worktree_acceptance -v
+      - name: Domain skill contracts
+        run: python -m unittest tests.test_domain_skills -v
+      - name: Benchmark contracts
+        run: python -m unittest tests.test_benchmark_contract -v
+      - name: Repository content contracts
+        run: python tests/validate_content.py
+      - name: Offline benchmark protocol validation
+        run: python -m benchmarks.cli validate --cases benchmarks/cases --configurations benchmarks/configurations
+
+  plan-f-contracts:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+      - name: Release evidence contracts
+        run: python -m unittest tests.test_release_contract -v
+      - name: Plugin compatibility helper contracts
+        run: python -m unittest tests.test_plugin_compatibility -v
+      - name: Repository content contracts
+        run: python tests/validate_content.py
+      - name: Offline release data validation
+        run: python -m release_contracts.cli validate --claims release_contracts/claims.json --compatibility release_contracts/compatibility.json

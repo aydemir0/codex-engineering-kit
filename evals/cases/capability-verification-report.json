@@ -1,0 +1,12 @@
+{
+  "id": "capability-verification-report",
+  "class": "capability",
+  "prompt": "Grade whether a versioned verification report preserves executable step evidence.",
+  "graderType": "deterministic",
+  "expect": {
+    "schemaVersion": 1,
+    "kind": "verification-report",
+    "requiredStepFields": ["command", "exitCode", "durationMs", "status"],
+    "requireExecutableEvidence": true
+  }
+}

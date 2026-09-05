@@ -1,0 +1,4 @@
+interface:
+  display_name: "Frontend Patterns"
+  short_description: "Review rendering, state, accessibility, and frontend boundaries"
+  default_prompt: "Use $frontend-patterns to inspect this frontend change, preserve rendering and state ownership, and verify accessibility and performance claims with evidence."

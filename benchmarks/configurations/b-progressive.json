@@ -1,0 +1,5 @@
+{
+  "id": "B",
+  "strategy": "progressive-disclosure",
+  "instruction": "Start with repository evidence and the task itself. Route only to the case's named relevant skill when that domain guidance is needed; do not load unrelated domain skills. Keep conclusions and verification requirements evidence-bound."
+}

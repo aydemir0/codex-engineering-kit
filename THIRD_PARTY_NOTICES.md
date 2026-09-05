@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-Codex Engineering Kit is an independent implementation. Its Codex-specific architecture, installer ownership model, verification runner, learning-candidate safety model, workflows, and documentation are maintained in this repository.
+Codex Engineering Kit is an independent implementation. Its native Codex plugin packaging, hook/runtime code, project-local subagents, state/compaction runtime, verification/eval tooling, worktree acceptance, release contracts, installer ownership model, learning-candidate safety model, workflows, and documentation are maintained in this repository.
 
 ## Everything Claude Code / ECC
 
@@ -14,7 +14,7 @@ Upstream copyright notice:
 
 > Copyright (c) 2026 Affaan Mustafa
 
-Concepts reviewed while designing this project included:
+High-level concepts reviewed while designing CEK included:
 
 - focused engineering roles/agents;
 - reusable workflow/skill organization;
@@ -24,7 +24,9 @@ Concepts reviewed while designing this project included:
 - development/review/research context organization;
 - MCP configuration organization.
 
-Codex Engineering Kit does **not** represent Claude-specific hook names, command semantics, or lifecycle APIs as native Codex capabilities. Those concepts were redesigned around Codex skills, role references, explicit workflows, project instructions, PowerShell scripts, and local-only integration metadata.
+CEK's v0.2 native Codex implementation is not a representation of Claude-specific lifecycle behavior. Native `.codex-plugin` packaging, `hooks/hooks.json` integration, the Python hook dispatcher, `.codex/agents` custom-agent definitions, versioned `.codex-kit` state/compaction handling, and Plan F compatibility/release evidence were implemented specifically against CEK's Codex design and repository evidence.
+
+CEK does **not** present Claude-specific hook names, command semantics, or lifecycle APIs as Codex capabilities.
 
 No endorsement by Affaan Mustafa, the upstream project, Anthropic, or OpenAI is implied.
 

@@ -1,0 +1,210 @@
+from pathlib import Path
+import re
+import unittest
+
+from release_contracts.model import (
+    ClaimRecord,
+    CompatibilityRecord,
+    CompatibilityResult,
+    load_claims,
+    load_compatibility,
+    validate_release_data,
+)
+
+ROOT = Path(__file__).resolve().parents[1]
+CLAIMS = ROOT / "release_contracts" / "claims.json"
+COMPAT = ROOT / "release_contracts" / "compatibility.json"
+
+
+class ReleaseModelTests(unittest.TestCase):
+    def test_release_data_loads_and_validates(self) -> None:
+        claims = load_claims(CLAIMS)
+        compatibility = load_compatibility(COMPAT)
+        self.assertGreaterEqual(len(claims), 11)
+        self.assertGreaterEqual(len(compatibility), 12)
+        self.assertEqual(validate_release_data(claims, compatibility), ())
+
+    def test_pass_compatibility_requires_evidence(self) -> None:
+        record = CompatibilityRecord(
+            surface="explicit-hooks",
+            cli_0147=CompatibilityResult("PASS", (), ""),
+            desktop_0152=CompatibilityResult("NOT_RUN", (), "not run"),
+        )
+        errors = validate_release_data((), (record,))
+        self.assertTrue(any("PASS requires evidence" in error for error in errors))
+
+    def test_verified_claim_requires_runtime_evidence(self) -> None:
+        claim = ClaimRecord(
+            id="native-hooks-default",
+            wording="Native plugin hooks",
+            state="VERIFIED",
+            implementation_evidence=("tests/test_hook_contract.py",),
+            runtime_evidence=(),
+            runtime_scope="Codex CLI 0.147.0",
+            limitation="",
+            public_wording="Native plugin hooks are verified on Codex CLI 0.147.0.",
+        )
+        errors = validate_release_data((claim,), ())
+        self.assertTrue(any("VERIFIED requires runtime evidence" in error for error in errors))
+
+    def test_duplicate_claim_ids_are_rejected(self) -> None:
+        first = ClaimRecord("same", "a", "LIMITED", ("x",), (), "", "limited", "a")
+        second = ClaimRecord("same", "b", "LIMITED", ("y",), (), "", "limited", "b")
+        errors = validate_release_data((first, second), ())
+        self.assertTrue(any("duplicate claim id" in error for error in errors))
+
+    def test_absolute_evidence_paths_are_rejected(self) -> None:
+        claim = ClaimRecord(
+            id="bad-path",
+            wording="Bad path",
+            state="IMPLEMENTED",
+            implementation_evidence=("C:/Users/name/private.md",),
+            runtime_evidence=(),
+            runtime_scope="",
+            limitation="",
+            public_wording="Bad path",
+        )
+        errors = validate_release_data((claim,), ())
+        self.assertTrue(any("repository-relative" in error for error in errors))
+
+
+class ReleaseDocumentationTests(unittest.TestCase):
+    def test_release_documents_name_both_baselines(self) -> None:
+        compatibility = (ROOT / "docs" / "release" / "compatibility-matrix.md").read_text(encoding="utf-8")
+        claims = (ROOT / "docs" / "release" / "claim-evidence-matrix.md").read_text(encoding="utf-8")
+        for text in (compatibility, claims):
+            self.assertIn("0.147.0", text)
+            self.assertIn("0.152.0", text)
+
+    def test_compatibility_document_contains_every_surface(self) -> None:
+        text = (ROOT / "docs" / "release" / "compatibility-matrix.md").read_text(encoding="utf-8")
+        for record in load_compatibility(COMPAT):
+            self.assertIn(record.surface, text)
+
+    def test_claim_document_contains_every_claim(self) -> None:
+        text = (ROOT / "docs" / "release" / "claim-evidence-matrix.md").read_text(encoding="utf-8")
+        for record in load_claims(CLAIMS):
+            self.assertIn(record.id, text)
+
+    def test_plan_f_release_markdown_is_sanitized(self) -> None:
+        paths = [
+            ROOT / "docs" / "release" / "compatibility-matrix.md",
+            ROOT / "docs" / "release" / "claim-evidence-matrix.md",
+            ROOT / "docs" / "research" / "evidence" / "codex-cli-0.147.0-plan-f-compatibility.md",
+            ROOT / "docs" / "research" / "evidence" / "codex-desktop-0.152.0-plan-f-compatibility.md",
+        ]
+        text = "\n".join(path.read_text(encoding="utf-8") for path in paths)
+        self.assertNotRegex(text, re.compile(r"\b(?:ghp_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,})\b"))
+        self.assertNotRegex(text, re.compile(r"[A-Za-z]:\\Users\\", re.IGNORECASE))
+        self.assertNotIn("/Users/", text)
+        self.assertNotIn("/home/", text)
+        self.assertNotIn("sessionId", text)
+
+    def test_readme_removes_stale_six_skill_language(self) -> None:
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertNotIn("only six active skills", text.casefold())
+        self.assertNotIn("Install the six toolkit skills", text)
+        self.assertNotIn("Lean orchestration", text)
+        self.assertIn("backend-patterns", text)
+        self.assertIn("frontend-patterns", text)
+
+    def test_readme_links_release_evidence(self) -> None:
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("docs/release/compatibility-matrix.md", text)
+        self.assertIn("docs/release/claim-evidence-matrix.md", text)
+        self.assertIn("docs/release/v0.2-rc-checklist.md", text)
+
+    def test_roadmap_v02_names_actual_slices(self) -> None:
+        text = (ROOT / "ROADMAP.md").read_text(encoding="utf-8").casefold()
+        for phrase in ("native plugin", "hooks", "subagents", "verification", "worktree", "release evidence"):
+            self.assertIn(phrase, text)
+
+    def test_public_surface_avoids_unsupported_positive_claims(self) -> None:
+        paths = [
+            ROOT / "README.md",
+            ROOT / "SECURITY.md",
+            ROOT / "ROADMAP.md",
+            ROOT / "THIRD_PARTY_NOTICES.md",
+            ROOT / "docs" / "release" / "v0.2-rc-checklist.md",
+        ]
+        text = "\n".join(path.read_text(encoding="utf-8") for path in paths)
+        positive_patterns = (
+            re.compile(r"\b(?:a|the|is)\s+production[- ]grade\s+(?:engineering\s+)?toolkit\b", re.IGNORECASE),
+            re.compile(r"\bfully secure\b", re.IGNORECASE),
+            re.compile(r"\bfeature parity (?:is )?achieved\b", re.IGNORECASE),
+            re.compile(r"\bcross[- ]platform compatible\b", re.IGNORECASE),
+            re.compile(r"\bmeasured lean(?:er)?\b", re.IGNORECASE),
+        )
+        for line in text.splitlines():
+            lowered = line.casefold()
+            if any(marker in lowered for marker in ("does not claim", "do not claim", "not claimed", "no measured", "not a claim")):
+                continue
+            for pattern in positive_patterns:
+                self.assertNotRegex(line, pattern)
+
+
+class PlanFStaticContractTests(unittest.TestCase):
+    def test_ci_contains_offline_plan_f_matrix(self) -> None:
+        text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        marker = "  plan-f-contracts:"
+        self.assertIn(marker, text)
+        section = text[text.index(marker):]
+        for required in (
+            "os: [ubuntu-latest, windows-latest, macos-latest]",
+            "python-version: '3.11'",
+            "python -m unittest tests.test_release_contract -v",
+            "python -m unittest tests.test_plugin_compatibility -v",
+            "python tests/validate_content.py",
+            "python -m release_contracts.cli validate --claims release_contracts/claims.json --compatibility release_contracts/compatibility.json",
+        ):
+            self.assertIn(required, section)
+        for forbidden in (
+            "codex exec",
+            "plugin marketplace add",
+            "CEK_HOOK_ACCEPTANCE",
+            "playwright",
+        ):
+            self.assertNotIn(forbidden, section)
+
+    def test_rc_decision_is_single_and_blocked_for_required_runtime_blockers(self) -> None:
+        text = (ROOT / "docs" / "release" / "v0.2-rc-checklist.md").read_text(encoding="utf-8")
+        decisions = [
+            line.strip()
+            for line in text.splitlines()
+            if line.startswith("Final RC decision: ")
+        ]
+        self.assertEqual(decisions, ["Final RC decision: BLOCKED"])
+
+        blockers: list[str] = []
+        for record in load_compatibility(COMPAT):
+            if record.surface != "desktop-parent-wait" and record.cli_0147.status != "PASS":
+                blockers.append(f"{record.surface}/cli0147={record.cli_0147.status}")
+            if record.desktop_0152.status != "PASS":
+                blockers.append(f"{record.surface}/desktop0152={record.desktop_0152.status}")
+        self.assertTrue(blockers, "expected at least one required runtime blocker")
+        self.assertNotIn("Final RC decision: READY", text)
+
+    def test_risk_001_stays_open_until_explicit_hooks_pass_both_baselines(self) -> None:
+        record = next(
+            item for item in load_compatibility(COMPAT)
+            if item.surface == "explicit-hooks"
+        )
+        dual_pass = (
+            record.cli_0147.status == "PASS"
+            and record.desktop_0152.status == "PASS"
+        )
+        text = (ROOT / "docs" / "release" / "v0.2-rc-checklist.md").read_text(encoding="utf-8")
+        if not dual_pass:
+            risk_section = text.split("## RISK-001 result", 1)[1].split("## ", 1)[0]
+            self.assertNotIn("Status: CLOSED", risk_section)
+            self.assertIn("explicit manifest", risk_section.casefold())
+
+    def test_external_repository_metadata_blocker_is_recorded(self) -> None:
+        text = (ROOT / "docs" / "release" / "v0.2-rc-checklist.md").read_text(encoding="utf-8")
+        self.assertIn("External repository metadata", text)
+        self.assertIn("Production-grade agentic software engineering toolkit for OpenAI Codex.", text)
+        self.assertIn("Evidence-bound engineering workflows for OpenAI Codex.", text)
+
+
+if __name__ == "__main__":
+    unittest.main()
