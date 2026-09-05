@@ -19,6 +19,8 @@ jobs:
           python-version: '3.11'
       - name: Validate repository contracts
         run: python tests/validate_content.py
+      - name: Validate architecture truth contract
+        run: python -m unittest tests.test_architecture_contract -v
       - name: Validate native plugin contract
         run: python -m unittest tests.test_plugin_contract -v
       - name: Validate plugin acceptance helpers
