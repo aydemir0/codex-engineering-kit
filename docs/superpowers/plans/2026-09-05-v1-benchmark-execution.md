@@ -4,7 +4,7 @@
 
 **Goal:** Execute the existing fixed 5-case × 3-configuration × 3-repeat context benchmark as a reproducible authenticated Codex campaign and publish only measurements supported by the complete validated dataset.
 
-**Architecture:** Keep `benchmarks/` as the protocol/report source of truth and add one authenticated campaign runner that executes every planned attempt in deterministic order, records sanitized run metadata, and refuses to produce a complete campaign when attempts are missing/duplicated. Reporting remains in `benchmarks.cli`/`benchmarks.report`.
+**Architecture:** Keep `benchmarks/` as the protocol/report source of truth and add one authenticated campaign runner that executes every planned attempt in deterministic order, records a single sanitized JSON document compatible with `benchmarks.report.load_run_records`, and retains failed/unavailable attempts. Reporting remains in `benchmarks.cli`/`benchmarks.report`.
 
 **Tech Stack:** Python 3.11, authenticated Codex CLI `exec`, benchmark JSON cases/configurations, existing benchmark model/report code, SHA-bound fixture repositories.
 
@@ -18,7 +18,8 @@
 - Benchmark fixture commits remain pinned; a changed fixture requires a new benchmark identity rather than silently reusing old results.
 - Raw authenticated output stays local; committed data must be sanitized and bounded.
 - No "lean", token-saving, context-efficiency, faster, or cheaper marketing claim is allowed until the complete report supports the exact wording.
-- If Codex telemetry does not expose a metric reliably, report that metric as unavailable rather than inventing a proxy without documenting it.
+- If Codex telemetry does not expose a metric reliably, encode that token metric as `{ "value": null, "source": "unavailable" }`; do not synthesize token counts from character length.
+- Runner output must remain directly loadable by `benchmarks.report.load_run_records`.
 
 ---
 
@@ -39,12 +40,12 @@ python scripts/acceptance/context_benchmark.py \
   --cases benchmarks/cases \
   --configurations benchmarks/configurations \
   --fixtures benchmarks/fixtures \
-  --output <local-runs.jsonl> \
+  --output <local-runs.json> \
   --repetitions 3 \
   --timeout 180
 ```
 
-- Produces exactly one JSONL record per attempted `{case, configuration, repetition}` tuple.
+- Produces one JSON document with a top-level `runs` array containing exactly one record per attempted `{case, configuration, repeat}` tuple.
 
 - [ ] **Step 1: Write failing runner tests**
 
@@ -52,13 +53,15 @@ Tests must assert:
 
 ```text
 - planned attempt order is deterministic;
-- 5×3×3 produces exactly 45 unique keys;
-- duplicate keys are rejected;
+- 5×3×3 produces exactly 45 unique tuple keys;
+- duplicate tuple keys are rejected;
 - fixture repositoryCommit mismatch blocks that case;
-- unavailable Codex produces explicit UNAVAILABLE records rather than fewer rows;
+- unavailable Codex still produces explicit UNAVAILABLE rows rather than fewer rows;
 - stdout/stderr secrets are redacted and raw text is bounded;
-- output includes exact codexVersion and CEK repositoryCommit;
-- runner never marks campaign complete itself; completeness belongs to report validation.
+- output records include exact codexVersion and a stable runtime identity;
+- top-level output contains `runs` and is accepted by `benchmarks.report.load_run_records`;
+- runner never invents token counts when telemetry is unavailable;
+- completeness remains the report builder's responsibility.
 ```
 
 - [ ] **Step 2: Run RED**
@@ -69,31 +72,53 @@ python -m unittest tests.test_context_benchmark_runner -v
 
 Expected: FAIL because the runner does not exist.
 
-- [ ] **Step 3: Implement minimal runner**
+- [ ] **Step 3: Implement minimal runner using the existing report schema**
 
-Each output record must include at minimum:
+The output file must be a JSON object. It may include campaign metadata such as `schemaVersion`, `kind`, `cekCommit`, and `fixtureCommits`, but the `runs` array must use the exact fields already consumed by `benchmarks.report.load_run_records`:
 
 ```json
 {
-  "caseId": "backend-design",
-  "configurationId": "A",
-  "repetition": 1,
-  "result": "PASS|FAIL|UNAVAILABLE",
-  "repositoryCommit": "<fixture sha>",
+  "schemaVersion": 1,
+  "kind": "authenticated-context-benchmark",
   "cekCommit": "<40-hex sha>",
-  "codexVersion": "<exact version>",
-  "elapsedMs": 0,
-  "inputMetric": null,
-  "outputMetric": null,
-  "captureSha256": "<sha256>",
-  "invariants": [{"text": "...", "passed": true}],
-  "notes": "sanitized bounded text"
+  "runs": [
+    {
+      "caseId": "backend-design",
+      "configurationId": "A",
+      "repeat": 1,
+      "status": "PASS",
+      "model": "<observed model identity>",
+      "reasoning": "<observed/fixed reasoning identity>",
+      "codexVersion": "<exact version>",
+      "inputTokens": {"value": null, "source": "unavailable"},
+      "outputTokens": {"value": null, "source": "unavailable"},
+      "cachedInputTokens": {"value": null, "source": "unavailable"},
+      "durationMs": 0,
+      "toolCalls": null,
+      "parentContextTokens": null,
+      "subagentTokens": null
+    }
+  ]
 }
 ```
 
-If reliable token/context metrics are available in the runtime output, store them under explicit metric names and add tests for parsing. If they are not available, keep metric fields `null`; do not synthesize token counts from character length.
+`status` must be exactly `PASS`, `FAIL`, or `UNAVAILABLE`. `repeat` must be a positive integer. `model`, `reasoning`, and `codexVersion` must be non-empty strings on every row because the existing report model requires them. If the runtime cannot expose a trustworthy model/reasoning identity, stop and classify the campaign infrastructure as invalid rather than writing empty strings.
 
-- [ ] **Step 4: Run GREEN**
+If reliable token/context metrics are available, use existing token-evidence source values `measured`, `exported`, or `estimated` only when the collection method genuinely matches that label and is documented. Otherwise use `unavailable` with `value: null`.
+
+- [ ] **Step 4: Add compatibility test against the existing loader**
+
+The test must write a temporary runner output file, then call:
+
+```python
+from benchmarks.report import load_run_records
+runs = load_run_records(path)
+assert len(runs) == expected
+```
+
+This prevents runner/report schema drift.
+
+- [ ] **Step 5: Run GREEN**
 
 ```bash
 python -m unittest tests.test_context_benchmark_runner -v
@@ -102,7 +127,7 @@ python -m unittest tests.test_benchmark_contract -v
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add scripts/acceptance/context_benchmark.py tests/test_context_benchmark_runner.py
@@ -157,7 +182,7 @@ git status --short
 git rev-parse HEAD
 ```
 
-Expected: clean tree; save the 40-character SHA as the CEK benchmark candidate.
+Expected: clean tree; save the 40-character SHA as the CEK benchmark candidate and require the runner's top-level `cekCommit` to match it.
 
 - [ ] **Step 2: Record exact Codex runtime**
 
@@ -172,7 +197,7 @@ Expected: exact version string recorded. The campaign report must name this runt
 ### Task 4: Execute All 45 Authenticated Attempts
 
 **Files:**
-- Local output only during execution: e.g. `.codex-kit/benchmarks/v1-runs.jsonl`
+- Local output only during execution: `.codex-kit/benchmarks/v1-runs.json`
 
 - [ ] **Step 1: Run the campaign once**
 
@@ -183,12 +208,12 @@ python scripts/acceptance/context_benchmark.py `
   --cases benchmarks/cases `
   --configurations benchmarks/configurations `
   --fixtures benchmarks/fixtures `
-  --output .codex-kit/benchmarks/v1-runs.jsonl `
+  --output .codex-kit/benchmarks/v1-runs.json `
   --repetitions 3 `
   --timeout 180
 ```
 
-Expected: exactly 45 records, including FAIL/UNAVAILABLE records if any attempt does not succeed.
+Expected: top-level `runs` contains exactly 45 records, including FAIL/UNAVAILABLE records if any attempt does not succeed.
 
 - [ ] **Step 2: Do not rerun selectively**
 
@@ -201,16 +226,16 @@ If infrastructure failure invalidates the campaign as a whole, archive/hash the 
 **Files:**
 - Use: `benchmarks/cli.py`, `benchmarks/report.py`
 - Create: sanitized `docs/research/evidence/codex-v1-context-benchmark.md`
-- Create: sanitized machine-readable dataset/report path selected by the existing benchmark model, excluding raw prompts/private output
+- Create: sanitized machine-readable dataset/report path selected by the detailed evidence policy, excluding raw private output
 - Modify: `docs/benchmark.md` only after validation
 
 - [ ] **Step 1: Generate report**
 
 ```bash
-python -m benchmarks.cli report --runs .codex-kit/benchmarks/v1-runs.jsonl --cases benchmarks/cases --configurations benchmarks/configurations --json
+python -m benchmarks.cli report --runs .codex-kit/benchmarks/v1-runs.json --cases benchmarks/cases --configurations benchmarks/configurations --json
 ```
 
-Expected: `complete=true` and `observed=45/45` before any comparative claim is considered.
+Expected: JSON contains `"complete": true`, `"expectedRuns": 45`, and `"observedRuns": 45` before any comparative claim is considered.
 
 - [ ] **Step 2: Validate deterministic invariants**
 
@@ -226,15 +251,15 @@ Expected: PASS.
 The evidence document must separate:
 
 ```text
-measured values
-missing/unavailable metrics
+measured/exported/estimated/unavailable metric sources
 failed/unavailable attempts
+runtime/model/reasoning identity
 statistical/experimental limitations
 allowed public wording
 forbidden extrapolations
 ```
 
-If token/context metrics are unavailable, CEK may still report task success/invariant outcomes and timing when measured, but must not call the result a measured context-efficiency win.
+If token/context metrics are unavailable, CEK may still report task status and measured duration/tool-call metrics where actually collected, but must not call the result a measured context-efficiency win.
 
 ---
 
@@ -260,10 +285,10 @@ Expected: PASS.
 
 - [ ] **Step 3: Independent statistical/evidence review**
 
-Reviewer confirms no selective reruns, no missing attempts, no unsupported token proxy, and no causal/generalized claim beyond the five fixed benchmark cases.
+Reviewer confirms no selective reruns, no missing attempts, no unsupported token proxy, runner/report schema compatibility, and no causal/generalized claim beyond the five fixed benchmark cases.
 
 ---
 
 ## Completion Criteria
 
-The benchmark workstream closes when the runner is regression-tested, protocol remains fixed at 45 attempts, the exact CEK SHA/runtime are frozen, all 45 rows are retained, the report validates complete or the campaign is explicitly invalid/blocked, and public performance/context wording does not exceed measured evidence.
+The benchmark workstream closes when the runner is regression-tested against the existing report loader, protocol remains fixed at 45 attempts, the exact CEK SHA/runtime are frozen, all 45 rows are retained in one valid JSON `runs` array, the report validates complete or the campaign is explicitly invalid/blocked, and public performance/context wording does not exceed measured evidence.
