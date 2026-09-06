@@ -4,17 +4,28 @@
       "id": "plugin-packaging",
       "wording": "Native Codex plugin packaging and repo-local marketplace integration",
       "state": "VERIFIED",
-      "implementationEvidence": [".codex-plugin/plugin.json", ".agents/plugins/marketplace.json", "tests/test_plugin_contract.py"],
-      "runtimeEvidence": ["docs/research/evidence/codex-cli-0.147.0-plugin-acceptance.md"],
-      "runtimeScope": "Codex CLI 0.147.0",
-      "limitation": "Desktop 0.152.0 plugin discovery and install/list behavior remain blocked in the Plan F campaign.",
-      "publicWording": "Native plugin packaging and repo-local marketplace integration are runtime-verified on Codex CLI 0.147.0; Desktop 0.152.0 remains separately tracked."
+      "implementationEvidence": [
+        ".codex-plugin/plugin.json",
+        ".agents/plugins/marketplace.json",
+        "tests/test_plugin_contract.py"
+      ],
+      "runtimeEvidence": [
+        "docs/research/evidence/codex-cli-0.147.0-plugin-acceptance.md",
+        "docs/research/evidence/codex-cli-0.153.0-v1-runtime-closure.md"
+      ],
+      "runtimeScope": "Codex CLI 0.147.0; Codex CLI 0.153.0",
+      "limitation": "Codex Desktop 0.152.0 plugin discovery and install/list behavior remain blocked and are not inferred from CLI evidence.",
+      "publicWording": "Native plugin packaging and repo-local marketplace integration are runtime-verified on Codex CLI 0.147.0 and Codex CLI 0.153.0; Codex Desktop 0.152.0 remains separately blocked."
     },
     {
       "id": "skills-eight",
       "wording": "Eight shipped skills with narrow contracts",
       "state": "IMPLEMENTED",
-      "implementationEvidence": ["tests/validate_content.py", "skills/backend-patterns/SKILL.md", "skills/frontend-patterns/SKILL.md"],
+      "implementationEvidence": [
+        "tests/validate_content.py",
+        "skills/backend-patterns/SKILL.md",
+        "skills/frontend-patterns/SKILL.md"
+      ],
       "runtimeEvidence": [],
       "runtimeScope": "",
       "limitation": "",
@@ -23,39 +34,86 @@
     {
       "id": "native-hooks-default",
       "wording": "Native hooks through default hooks/hooks.json discovery",
-      "state": "LIMITED",
-      "implementationEvidence": ["hooks/hooks.json", "tests/test_hook_contract.py", "tests/test_hook_dispatch.py"],
-      "runtimeEvidence": ["docs/research/evidence/codex-cli-0.147.0-hook-acceptance.md", "docs/research/evidence/codex-cli-0.147.0-plan-c-state-subagent-acceptance.md"],
-      "runtimeScope": "Codex CLI 0.147.0",
-      "limitation": "Default discovery and bounded lifecycle behavior have scoped CLI 0.147.0 evidence, but the SessionEnd timeout-budget discrepancy is unresolved and Desktop 0.152.0 is blocked.",
-      "publicWording": "Native hook handlers and default hook discovery have scoped Codex CLI 0.147.0 evidence; SessionEnd and Desktop 0.152.0 remain explicit limitations."
+      "state": "VERIFIED",
+      "implementationEvidence": [
+        "hooks/hooks.json",
+        "tests/test_hook_contract.py",
+        "tests/test_hook_dispatch.py"
+      ],
+      "runtimeEvidence": [
+        "docs/research/evidence/codex-cli-0.147.0-hook-acceptance.md",
+        "docs/research/evidence/codex-cli-0.147.0-plan-c-state-subagent-acceptance.md",
+        "docs/research/evidence/codex-cli-0.153.0-v1-runtime-closure.md"
+      ],
+      "runtimeScope": "Codex CLI 0.153.0",
+      "limitation": "Verification is scoped to Codex CLI 0.153.0. Historical CLI 0.147.0 default-hook evidence exists, but its separate SessionEnd timeout surface remains blocked; Codex Desktop 0.152.0 remains blocked.",
+      "publicWording": "Native hook handlers and default hook discovery are runtime-verified on Codex CLI 0.153.0; CLI 0.147.0 SessionEnd and Codex Desktop 0.152.0 remain separate limitations."
+    },
+    {
+      "id": "native-hooks-explicit",
+      "wording": "Explicit manifest hook override compatibility for the scoped v1 runtime boundary",
+      "state": "VERIFIED",
+      "implementationEvidence": [
+        ".codex-plugin/plugin.json",
+        "hooks/hooks.json",
+        "scripts/acceptance/plugin_compatibility.py",
+        "tests/test_plugin_compatibility.py",
+        "tests/test_hook_contract.py",
+        "tests/test_hook_dispatch.py"
+      ],
+      "runtimeEvidence": [
+        "docs/research/evidence/codex-cli-0.153.0-v1-runtime-closure.md"
+      ],
+      "runtimeScope": "Codex CLI 0.153.0 only",
+      "limitation": "The shipped primary plugin manifest continues to use default hooks/hooks.json discovery and does not enable an explicit hooks override. Explicit-manifest support on historical Codex CLI 0.147.0 and Codex Desktop 0.152.0 is outside this v1 support claim and remains BLOCKED in the compatibility matrix.",
+      "publicWording": "Explicit manifest hook override compatibility is runtime-verified for Codex CLI 0.153.0 only; support on Codex CLI 0.147.0 and Codex Desktop 0.152.0 is not claimed."
     },
     {
       "id": "native-subagents",
       "wording": "Project-local Codex-native subagents",
       "state": "VERIFIED",
-      "implementationEvidence": [".codex/agents/reviewer.toml", "tests/test_agent_contract.py"],
-      "runtimeEvidence": ["docs/research/evidence/codex-cli-0.147.0-native-reviewer-subagent-acceptance.md", "docs/research/evidence/codex-cli-0.147.0-plan-c-state-subagent-acceptance.md"],
-      "runtimeScope": "Codex CLI 0.147.0",
-      "limitation": "Desktop 0.152.0 native-subagent behavior remains blocked in the Plan F campaign.",
-      "publicWording": "Project-local Codex-native subagent lifecycle is runtime-verified on Codex CLI 0.147.0; Desktop 0.152.0 remains separately tracked."
+      "implementationEvidence": [
+        ".codex/agents/reviewer.toml",
+        "tests/test_agent_contract.py"
+      ],
+      "runtimeEvidence": [
+        "docs/research/evidence/codex-cli-0.147.0-native-reviewer-subagent-acceptance.md",
+        "docs/research/evidence/codex-cli-0.147.0-plan-c-state-subagent-acceptance.md",
+        "docs/research/evidence/codex-cli-0.153.0-v1-runtime-closure.md"
+      ],
+      "runtimeScope": "Codex CLI 0.147.0; Codex CLI 0.153.0",
+      "limitation": "Codex Desktop 0.152.0 native-subagent behavior remains blocked. On CLI 0.153.0 the project-local lifecycle, matching identity, and parent resume were observed; exact child response text propagation into the root JSONL stream was not observed.",
+      "publicWording": "Project-local Codex-native subagent lifecycle is runtime-verified on Codex CLI 0.147.0 and Codex CLI 0.153.0; Codex Desktop 0.152.0 remains separately blocked."
     },
     {
       "id": "state-compaction",
       "wording": "Bounded state persistence and compaction continuation",
       "state": "VERIFIED",
-      "implementationEvidence": ["tests/test_hook_dispatch.py", "runtime/state.py"],
-      "runtimeEvidence": ["docs/research/evidence/codex-cli-0.147.0-plan-c-state-subagent-acceptance.md", "docs/research/evidence/codex-cli-0.147.0-plan-c-corruption-recovery-acceptance.md"],
-      "runtimeScope": "Codex CLI 0.147.0",
-      "limitation": "Desktop 0.152.0 compaction/state behavior remains blocked in the Plan F campaign.",
-      "publicWording": "Bounded state persistence and compaction continuation are runtime-verified on Codex CLI 0.147.0; Desktop 0.152.0 remains separately tracked."
+      "implementationEvidence": [
+        "tests/test_hook_dispatch.py",
+        "runtime/state.py"
+      ],
+      "runtimeEvidence": [
+        "docs/research/evidence/codex-cli-0.147.0-plan-c-state-subagent-acceptance.md",
+        "docs/research/evidence/codex-cli-0.147.0-plan-c-corruption-recovery-acceptance.md",
+        "docs/research/evidence/codex-cli-0.153.0-v1-runtime-closure.md"
+      ],
+      "runtimeScope": "Codex CLI 0.147.0; Codex CLI 0.153.0",
+      "limitation": "Codex Desktop 0.152.0 compaction/state behavior remains blocked. On CLI 0.153.0 manual PreCompact/PostCompact, schema-v1 checkpoint, resume continuation, and unsupported-schema recovery passed; SessionStart source=compact was not observed in the manual resume path.",
+      "publicWording": "Bounded state persistence and compaction continuation are runtime-verified on Codex CLI 0.147.0 and Codex CLI 0.153.0; Codex Desktop 0.152.0 remains separately blocked."
     },
     {
       "id": "verification-evals",
       "wording": "Verification engine and deterministic evals",
       "state": "IMPLEMENTED",
-      "implementationEvidence": ["tests/test_verification_engine.py", "tests/test_eval_runner.py", ".github/workflows/ci.yml"],
-      "runtimeEvidence": ["docs/research/evidence/codex-cli-0.147.0-plan-d-pressure-rerun-acceptance.md"],
+      "implementationEvidence": [
+        "tests/test_verification_engine.py",
+        "tests/test_eval_runner.py",
+        ".github/workflows/ci.yml"
+      ],
+      "runtimeEvidence": [
+        "docs/research/evidence/codex-cli-0.147.0-plan-d-pressure-rerun-acceptance.md"
+      ],
       "runtimeScope": "Codex CLI 0.147.0",
       "limitation": "",
       "publicWording": "Verification and deterministic eval tooling are implemented and exercised in the repository CI matrix."
@@ -64,7 +122,10 @@
       "id": "manual-worktrees",
       "wording": "Bounded manual Git-worktree acceptance",
       "state": "IMPLEMENTED",
-      "implementationEvidence": ["tests/test_worktree_acceptance.py", "docs/research/evidence/plan-e-manual-worktree-acceptance.md"],
+      "implementationEvidence": [
+        "tests/test_worktree_acceptance.py",
+        "docs/research/evidence/plan-e-manual-worktree-acceptance.md"
+      ],
       "runtimeEvidence": [],
       "runtimeScope": "",
       "limitation": "",
@@ -74,7 +135,11 @@
       "id": "domain-packs",
       "wording": "Optional backend and frontend pattern skills",
       "state": "IMPLEMENTED",
-      "implementationEvidence": ["skills/backend-patterns/SKILL.md", "skills/frontend-patterns/SKILL.md", "tests/test_domain_skills.py"],
+      "implementationEvidence": [
+        "skills/backend-patterns/SKILL.md",
+        "skills/frontend-patterns/SKILL.md",
+        "tests/test_domain_skills.py"
+      ],
       "runtimeEvidence": [],
       "runtimeScope": "",
       "limitation": "",
@@ -84,7 +149,12 @@
       "id": "context-benchmark-protocol",
       "wording": "Fixed A/B/C context-efficiency benchmark protocol",
       "state": "IMPLEMENTED",
-      "implementationEvidence": ["benchmarks/model.py", "benchmarks/report.py", "tests/test_benchmark_contract.py", "docs/benchmark.md"],
+      "implementationEvidence": [
+        "benchmarks/model.py",
+        "benchmarks/report.py",
+        "tests/test_benchmark_contract.py",
+        "docs/benchmark.md"
+      ],
       "runtimeEvidence": [],
       "runtimeScope": "",
       "limitation": "",
@@ -94,7 +164,9 @@
       "id": "three-os-ci",
       "wording": "Deterministic Ubuntu, Windows, and macOS CI contracts",
       "state": "IMPLEMENTED",
-      "implementationEvidence": [".github/workflows/ci.yml"],
+      "implementationEvidence": [
+        ".github/workflows/ci.yml"
+      ],
       "runtimeEvidence": [],
       "runtimeScope": "",
       "limitation": "",
@@ -102,13 +174,21 @@
     },
     {
       "id": "compatibility-window",
-      "wording": "Declared Codex CLI 0.147.0 and Desktop 0.152.0 compatibility window",
+      "wording": "Tracked Codex CLI 0.147.0, Codex CLI 0.153.0, and Codex Desktop 0.152.0 compatibility boundaries",
       "state": "LIMITED",
-      "implementationEvidence": ["docs/superpowers/specs/2026-09-05-v0.2-release-evidence-compatibility-design.md", "docs/superpowers/plans/2026-09-03-codex-engineering-kit-v0.2-master.md", "release_contracts/compatibility.json"],
-      "runtimeEvidence": ["docs/research/evidence/codex-cli-0.147.0-plan-f-compatibility.md", "docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md"],
-      "runtimeScope": "Codex CLI 0.147.0; Codex Desktop 0.152.0",
-      "limitation": "Desktop 0.152.0 required surfaces are blocked in the current execution harness; explicit manifest hooks are blocked on both baselines; SessionEnd and Desktop parent-wait remain unresolved.",
-      "publicWording": "Compatibility is tracked separately for Codex CLI 0.147.0 and Desktop 0.152.0; unresolved or unavailable surfaces remain explicitly limited."
+      "implementationEvidence": [
+        "docs/superpowers/specs/2026-09-05-v0.2-release-evidence-compatibility-design.md",
+        "docs/superpowers/plans/2026-09-03-codex-engineering-kit-v0.2-master.md",
+        "release_contracts/compatibility.json"
+      ],
+      "runtimeEvidence": [
+        "docs/research/evidence/codex-cli-0.147.0-plan-f-compatibility.md",
+        "docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md",
+        "docs/research/evidence/codex-cli-0.153.0-v1-runtime-closure.md"
+      ],
+      "runtimeScope": "Codex CLI 0.147.0 historical evidence; Codex CLI 0.153.0 fresh v1 evidence; Codex Desktop 0.152.0 blocked/unverified",
+      "limitation": "Fresh Codex CLI 0.153.0 evidence passes the required plugin, hook, subagent, compaction, and SessionEnd surfaces tested in the v1 campaign, while skill-discovery and interactive-plugin-discovery remain NOT_RUN. Historical CLI 0.147.0 retains unresolved explicit-hooks and SessionEnd surfaces. Codex Desktop 0.152.0 required runtime surfaces, including parent-wait, remain blocked.",
+      "publicWording": "Compatibility is tracked separately across historical Codex CLI 0.147.0, fresh Codex CLI 0.153.0, and blocked/unverified Codex Desktop 0.152.0; evidence from one runtime is not promoted to another."
     }
   ]
 }

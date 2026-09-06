@@ -34,6 +34,7 @@ class CompatibilityRecord:
     surface: str
     cli_0147: CompatibilityResult
     desktop_0152: CompatibilityResult
+    cli_0153: CompatibilityResult | None = None
 
 
 def _tuple_strings(value: object, label: str) -> tuple[str, ...]:
@@ -91,14 +92,23 @@ def load_compatibility(path: Path) -> tuple[CompatibilityRecord, ...]:
     for index, row in enumerate(rows):
         if not isinstance(row, dict):
             raise ValueError(f"compatibility[{index}] must be an object")
-        if "cli0147" not in row or "desktop0152" not in row:
-            raise ValueError(f"compatibility[{index}] requires cli0147 and desktop0152")
+        if (
+            "cli0147" not in row
+            or "cli0153" not in row
+            or "desktop0152" not in row
+        ):
+            raise ValueError(
+                f"compatibility[{index}] requires cli0147, cli0153, and desktop0152"
+            )
         records.append(
             CompatibilityRecord(
                 surface=str(row.get("surface", "")),
                 cli_0147=_load_compatibility_result(row["cli0147"], f"compatibility[{index}].cli0147"),
                 desktop_0152=_load_compatibility_result(
                     row["desktop0152"], f"compatibility[{index}].desktop0152"
+                ),
+                cli_0153=_load_compatibility_result(
+                    row["cli0153"], f"compatibility[{index}].cli0153"
                 ),
             )
         )
@@ -168,8 +178,11 @@ def validate_release_data(
 
         for runtime_label, result in (
             ("cli0147", record.cli_0147),
+            ("cli0153", record.cli_0153),
             ("desktop0152", record.desktop_0152),
         ):
+            if result is None:
+                continue
             if result.status not in COMPATIBILITY_STATES:
                 errors.append(
                     f"compatibility {record.surface} {runtime_label}: invalid status {result.status!r}"
