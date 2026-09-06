@@ -62,7 +62,8 @@ class HookDispatchBehaviorTests(unittest.TestCase):
             )
             with patch.dict(os.environ, {"CEK_HOOK_ACCEPTANCE": "1"}, clear=False):
                 result = dispatch(payload)
-            without_mode = dispatch(payload)
+            with patch.dict(os.environ, {"CEK_HOOK_ACCEPTANCE": "0"}, clear=False):
+                without_mode = dispatch(payload)
 
         self.assertEqual(
             result["hookSpecificOutput"]["permissionDecision"],
