@@ -23,9 +23,10 @@ REQUIRED_STAGES = (
 SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 
 SENSITIVE_PATTERNS = (
-    re.compile(r"[A-Za-z]:\\Users\\", re.IGNORECASE),
-    re.compile(r"/Users/"),
-    re.compile(r"/home/"),
+    re.compile(
+        r"(?:^|[\s\"'`=(])(?:[A-Za-z]:[\\/]|\\\\[^\\/\s]+[\\/]|/(?!/))",
+        re.IGNORECASE,
+    ),
     re.compile(r"\bsessionId\b"),
     re.compile(r"\bghp_[A-Za-z0-9_-]{20,}\b"),
     re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b"),

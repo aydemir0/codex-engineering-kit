@@ -109,8 +109,11 @@ class WorkflowEvidenceContractTests(unittest.TestCase):
     def test_sensitive_or_machine_local_evidence_is_rejected(self) -> None:
         forbidden = (
             r"C:\Users\alice\workflow.json",
+            r"D:\PROJECTS\private\workflow.json",
+            r"\\server\share\workflow.json",
             "/Users/alice/workflow.json",
             "/home/alice/workflow.json",
+            "/tmp/private/workflow.json",
             "sessionId=private-session",
             "ghp_" + ("A" * 24),
             "sk-" + ("B" * 24),
