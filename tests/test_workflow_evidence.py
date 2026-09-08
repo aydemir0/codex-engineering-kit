@@ -111,9 +111,13 @@ class WorkflowEvidenceContractTests(unittest.TestCase):
             r"C:\Users\alice\workflow.json",
             r"D:\PROJECTS\private\workflow.json",
             r"\\server\share\workflow.json",
+            r"artifact=[D:\PROJECTS\private\workflow.json]",
+            r"path:\\server\share\workflow.json",
             "/Users/alice/workflow.json",
             "/home/alice/workflow.json",
             "/tmp/private/workflow.json",
+            "artifact,/tmp/private/workflow.json",
+            "path:/tmp/private/workflow.json",
             "sessionId=private-session",
             "ghp_" + ("A" * 24),
             "sk-" + ("B" * 24),
@@ -131,7 +135,12 @@ class WorkflowEvidenceContractTests(unittest.TestCase):
                     f"expected sensitive evidence to be rejected: {value}",
                 )
 
+        record = valid_record()
+        record["stages"][0]["evidence"] = [
+            "https://example.com/evidence",
+        ]
 
+        self.assertEqual(self.validate(record), ())
 
     def test_cli_valid_record_returns_zero_without_echoing_evidence(self) -> None:
         self.assertIsNotNone(

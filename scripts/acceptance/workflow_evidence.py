@@ -23,8 +23,10 @@ REQUIRED_STAGES = (
 SHA_RE = re.compile(r"^[0-9a-fA-F]{40}$")
 
 SENSITIVE_PATTERNS = (
+    re.compile(r"(?<![A-Za-z0-9])[A-Za-z]:[\\/]"),
+    re.compile(r"\\\\[^\\/\s]+[\\/]"),
     re.compile(
-        r"(?:^|[\s\"'`=(])(?:[A-Za-z]:[\\/]|\\\\[^\\/\s]+[\\/]|/(?!/))",
+        r"(?<!https:)(?<!http:)(?<![A-Za-z0-9/])/(?!/)",
         re.IGNORECASE,
     ),
     re.compile(r"\bsessionId\b"),
