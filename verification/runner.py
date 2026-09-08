@@ -7,7 +7,7 @@ from verification.git_checks import run_git_diff_check
 from verification.model import VerificationReport, VerificationStep
 from verification.node import discover_node_steps
 from verification.python_project import discover_python_steps
-from verification.security import scan_secret_patterns
+from verification.security import redact_sensitive_text, scan_secret_patterns
 
 SCHEMA_VERSION = 1
 REPORT_KIND = "verification-report"
@@ -29,6 +29,7 @@ def _has_python_markers(project_path: Path) -> bool:
 
 
 def _bounded_evidence(text: str, max_bytes: int = 8192) -> str:
+    text = redact_sensitive_text(text)
     encoded = text.encode("utf-8")
     if len(encoded) <= max_bytes:
         return text

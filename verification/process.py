@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 import time
@@ -9,6 +10,7 @@ from pathlib import Path
 from typing import Sequence
 
 MAX_CAPTURE_BYTES = 8192
+BATCH_UNSAFE_ARGUMENT = re.compile(r'[&|<>^%!()\r\n"]')
 
 
 @dataclass(frozen=True)
@@ -65,21 +67,31 @@ def run_command(
             reason=f"Executable not found: {command[0]}",
         )
 
-    invocation = [resolved, *command[1:]]
+    invocation: list[str] | str = [resolved, *command[1:]]
+    executable: str | None = None
     if os.name == "nt" and Path(resolved).suffix.casefold() in {".cmd", ".bat"}:
+        unsafe = next((part for part in command[1:] if BATCH_UNSAFE_ARGUMENT.search(part)), None)
+        if unsafe is not None:
+            return ProcessResult(
+                command=command,
+                exit_code=None,
+                duration_ms=0,
+                status="failed",
+                stdout_tail="",
+                stderr_tail="",
+                reason="Unsafe argument rejected for Windows batch command",
+            )
         comspec = os.environ.get("COMSPEC") or shutil.which("cmd.exe") or "cmd.exe"
-        invocation = [
-            comspec,
-            "/d",
-            "/s",
-            "/c",
-            subprocess.list2cmdline(invocation),
-        ]
+        batch_command = subprocess.list2cmdline(invocation)
+        command_prefix = subprocess.list2cmdline([comspec, "/d", "/s", "/c"])
+        invocation = f'{command_prefix} "{batch_command}"'
+        executable = comspec
 
     started = time.monotonic_ns()
     try:
         completed = subprocess.run(
             invocation,
+            executable=executable,
             cwd=str(cwd),
             shell=False,
             capture_output=True,

@@ -79,7 +79,7 @@ flowchart TD
 
 ### Hook and state boundary
 
-`hooks/hooks.json` is the current default native hook-discovery path. Hook behavior is a guardrail/evidence mechanism, not a security sandbox. Explicit manifest hook override remains governed by the compatibility matrix while RISK-001 is unresolved.
+`hooks/hooks.json` is the current default native hook-discovery path. Hook behavior is a guardrail/evidence mechanism, not a security sandbox. The compatibility matrix records the scoped Codex CLI 0.153 hook result separately from untested or blocked runtimes.
 
 `runtime/` owns bounded local-state helpers. `.codex-kit` state remains local/ignored unless an explicit export format is introduced.
 

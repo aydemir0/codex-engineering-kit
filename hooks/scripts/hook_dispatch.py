@@ -152,13 +152,7 @@ def _session_start(payload: dict[str, Any]) -> dict[str, Any]:
                 "checkpoint."
             )
         elif isinstance(compact_state, dict):
-            prior_turn = compact_state.get("turnId")
-            trigger = compact_state.get("trigger")
-            if isinstance(prior_turn, str) and isinstance(trigger, str):
-                context += (
-                    f" Resuming after compaction from turn {prior_turn} "
-                    f"(trigger {trigger})."
-                )
+            context += " Resuming after compaction from a valid checkpoint."
     context = context[:MAX_CONTEXT_CHARS]
     _append_event(payload)
     return {

@@ -29,6 +29,10 @@ jobs:
         run: python -m unittest tests.test_hook_contract -v
       - name: Validate native hook behavior contracts
         run: python -m unittest tests.test_hook_dispatch -v
+      - name: Validate state security contracts
+        run: python -m unittest tests.test_state_contract -v
+      - name: Validate WS4 security contracts
+        run: python -m unittest tests.test_security_contract -v
       - name: Validate native reviewer agent contract
         run: python -m unittest tests.test_agent_contract -v
       - name: Validate process runner contract

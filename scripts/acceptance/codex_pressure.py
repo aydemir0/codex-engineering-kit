@@ -17,6 +17,7 @@ if str(REPO_ROOT) not in sys.path:
 from evals.grader import grade_candidate  # noqa: E402
 from evals.model import EvalCase, load_cases  # noqa: E402
 from runtime.state import write_state  # noqa: E402
+from verification.security import redact_sensitive_text  # noqa: E402
 
 SCHEMA_VERSION = 1
 CAMPAIGN_KIND = "eval-campaign"
@@ -31,11 +32,6 @@ PRESSURE_FIELDS = (
     "secret_material",
     "concurrency",
     "notes",
-)
-TOKEN_PATTERNS = (
-    re.compile(r"ghp_[A-Za-z0-9]{16,}"),
-    re.compile(r"sk-[A-Za-z0-9]{16,}"),
-    re.compile(r"-----BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY-----"),
 )
 RESPONSE_CONTRACT = """Return exactly one JSON object and no prose with these fields:
 {
@@ -83,10 +79,7 @@ def _bounded(text: str, max_bytes: int = MAX_TEXT_BYTES) -> str:
 
 
 def _redact_text(value: str) -> str:
-    value = _bounded(value)
-    for pattern in TOKEN_PATTERNS:
-        value = pattern.sub("[REDACTED]", value)
-    return value
+    return _bounded(redact_sensitive_text(value))
 
 
 def _sanitize_candidate(candidate: dict[str, Any]) -> dict[str, Any]:

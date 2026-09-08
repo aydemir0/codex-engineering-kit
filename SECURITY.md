@@ -16,13 +16,15 @@ A useful private report includes the affected version/commit, environment, affec
 
 ## Security boundaries
 
+The repository-specific assets, trust boundaries, mitigations, and residual risks are detailed in the [CEK threat model](docs/security/threat-model.md).
+
 ### Hooks are guardrails, not a sandbox
 
 v0.2 native hooks can provide bounded lifecycle evidence, state/compaction handling, and narrow PreToolUse deny/allow decisions. They are not an operating-system sandbox, a complete policy engine, or a guarantee that arbitrary unsafe behavior cannot occur.
 
 Hook configuration and executable code that is not managed by CEK remains a user trust/review boundary. A one-off trust bypass used for an isolated acceptance experiment would prove only that the tested loading/execution path worked under that bypass; it would **not** prove the normal trust UX.
 
-The primary plugin manifest continues to omit an explicit `hooks` override while RISK-001 is unresolved. Runtime compatibility status is tracked in `docs/release/compatibility-matrix.md`.
+The primary plugin manifest omits an explicit `hooks` override. The scoped Codex CLI 0.153 hook result and the still-separate Desktop/runtime statuses are tracked in `docs/release/compatibility-matrix.md`.
 
 ### Python runtime requirement
 

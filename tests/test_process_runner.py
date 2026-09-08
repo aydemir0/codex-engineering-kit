@@ -76,6 +76,33 @@ class ProcessRunnerTests(unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         self.assertIn("CEK_CMD_OK", result.stdout_tail)
 
+    @unittest.skipUnless(os.name == "nt", "Windows .cmd compatibility contract")
+    def test_windows_cmd_path_with_spaces_executes_without_double_quoting(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir) / "directory with spaces"
+            root.mkdir()
+            script = root / "cek fixture.cmd"
+            script.write_text("@echo CEK_CMD_SPACE_OK\r\n@exit /b 0\r\n", encoding="utf-8")
+
+            result = run_command([str(script)], root)
+
+        self.assertEqual(result.status, "passed")
+        self.assertEqual(result.exit_code, 0)
+        self.assertIn("CEK_CMD_SPACE_OK", result.stdout_tail)
+
+    @unittest.skipUnless(os.name == "nt", "Windows .cmd compatibility contract")
+    def test_windows_cmd_rejects_shell_metacharacter_arguments(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            script = root / "cek-fixture.cmd"
+            script.write_text("@echo %*\r\n@exit /b 0\r\n", encoding="utf-8")
+
+            result = run_command([str(script), "safe&exit /b 9"], root)
+
+        self.assertEqual(result.status, "failed")
+        self.assertIsNone(result.exit_code)
+        self.assertIn("unsafe argument", result.reason.casefold())
+
 
 if __name__ == "__main__":
     unittest.main()

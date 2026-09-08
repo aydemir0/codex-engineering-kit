@@ -2,6 +2,7 @@
 .codex-kit/candidates/
 .codex-kit/hooks/
 .codex-kit/evals/
+.codex-kit/verification/
 __pycache__/
 .env
 .env.*

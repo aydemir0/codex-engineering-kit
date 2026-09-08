@@ -6,6 +6,13 @@ function Assert-True {
     if (-not $Condition) { throw "ASSERTION FAILED: $Message" }
 }
 
+function Assert-Throws {
+    param([scriptblock]$Action, [string]$Message)
+    $threw = $false
+    try { & $Action } catch { $threw = $true }
+    if (-not $threw) { throw "ASSERTION FAILED: $Message" }
+}
+
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $Templates = Join-Path $RepoRoot 'mcp/templates'
 $Configure = Join-Path $RepoRoot 'mcp/configure.ps1'
@@ -36,6 +43,26 @@ try {
     Assert-True (Test-Path -LiteralPath $Output) 'MCP configurator must write selected local config'
     $Generated = Get-Content -LiteralPath $Output -Raw | ConvertFrom-Json
     Assert-True ($Generated.provider -eq 'github') 'generated provider must match selection'
+
+    $SupabaseOutput = Join-Path $TempRoot 'supabase.local.json'
+    $PriorSupabaseToken = [System.Environment]::GetEnvironmentVariable('SUPABASE_ACCESS_TOKEN')
+    try {
+        [System.Environment]::SetEnvironmentVariable('SUPABASE_ACCESS_TOKEN', $null)
+        Assert-Throws {
+            & $Configure -Provider supabase -OutputPath $SupabaseOutput | Out-Null
+        } 'environment-based provider must fail closed when required credential is absent'
+
+        $SyntheticToken = 'fixture-local-token-never-write'
+        [System.Environment]::SetEnvironmentVariable('SUPABASE_ACCESS_TOKEN', $SyntheticToken)
+        & $Configure -Provider supabase -OutputPath $SupabaseOutput | Out-Null
+        $SupabaseRaw = Get-Content -LiteralPath $SupabaseOutput -Raw
+        $SupabaseGenerated = $SupabaseRaw | ConvertFrom-Json
+        Assert-True ($SupabaseGenerated.configuration_scope -eq 'local-only') 'generated provider metadata must remain local-only'
+        Assert-True ($SupabaseRaw -notmatch [regex]::Escape($SyntheticToken)) 'generated metadata must not persist environment credential values'
+    }
+    finally {
+        [System.Environment]::SetEnvironmentVariable('SUPABASE_ACCESS_TOKEN', $PriorSupabaseToken)
+    }
 
     Write-Host 'PASS: MCP configuration contracts satisfied'
 }

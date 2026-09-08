@@ -10,7 +10,7 @@ This was **not** a single-session run. A `collaborationwait_agent` call remained
 
 - Platform: Windows x64
 - Runtime: `codex-cli 0.152.0`
-- Bundled executable: `C:\Users\aydin\AppData\Local\OpenAI\Codex\bin\7537f22ba194f7c1\codex.exe`
+- Bundled executable: `<CODEX_BUNDLED_BIN>\codex.exe`
 - Executable SHA-256: `E46F188BB3FA90FE3E05835401FACCE253CA0442E30F4B69F170BE696B43F3EC`
 - Executable length: `293066544` bytes
 - Exactly one local Desktop 0.152.0 candidate was found in the searched roots.

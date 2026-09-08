@@ -15,9 +15,15 @@ $AllowedCategories = @(
     'project_specific'
 )
 $SecretPatterns = @(
-    'ghp_[A-Za-z0-9]{16,}',
-    'sk-[A-Za-z0-9]{16,}',
-    'BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY'
+    'gh[pousr]_[A-Za-z0-9]{16,}',
+    'sk-(?:proj-)?[A-Za-z0-9_-]{16,}',
+    'BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY',
+    'Authorization:\s*Bearer\s+\S+',
+    '"authorization"\s*:\s*"Bearer\s+[^"]+"',
+    'authorization\s*=\s*Bearer\s+\S+',
+    '[A-Za-z]:(?:\\{1,2})Users(?:\\{1,2})[^\s]+',
+    '/(?:Users|home)/[^/\s]+/',
+    '\bsession(?:Id|_id)\s*[:=]\s*\S+'
 )
 
 if (-not (Test-Path -LiteralPath $InputPath -PathType Leaf)) {
@@ -36,17 +42,7 @@ foreach ($Observation in $Observations) {
     $Evidence = @($Observation.evidence | ForEach-Object { [string]$_ })
     $Scope = if ([string]$Observation.scope -eq 'general') { 'general' } else { 'project' }
 
-    if ($AllowedCategories -notcontains $Category) {
-        $Rejected.Add([ordered]@{ title = $Title; reason = "unsupported category: $Category" })
-        continue
-    }
-
-    if ([string]::IsNullOrWhiteSpace($Title) -or $Evidence.Count -eq 0) {
-        $Rejected.Add([ordered]@{ title = $Title; reason = 'insufficient evidence' })
-        continue
-    }
-
-    $Combined = "$Title`n$($Evidence -join "`n")"
+    $Combined = "$Title`n$Category`n$($Evidence -join "`n")"
     $ContainsSensitive = $false
     foreach ($Pattern in $SecretPatterns) {
         if ($Combined -match $Pattern) {
@@ -55,8 +51,18 @@ foreach ($Observation in $Observations) {
         }
     }
     if ($ContainsSensitive) {
-        $Rejected.Add([ordered]@{ title = $Title; reason = 'sensitive data detected; candidate rejected' })
+        $Rejected.Add([ordered]@{ title = '<redacted>'; reason = 'sensitive data detected; candidate rejected' })
         $Redactions += 1
+        continue
+    }
+
+    if ($AllowedCategories -notcontains $Category) {
+        $Rejected.Add([ordered]@{ title = $Title; reason = "unsupported category: $Category" })
+        continue
+    }
+
+    if ([string]::IsNullOrWhiteSpace($Title) -or $Evidence.Count -eq 0) {
+        $Rejected.Add([ordered]@{ title = $Title; reason = 'insufficient evidence' })
         continue
     }
 

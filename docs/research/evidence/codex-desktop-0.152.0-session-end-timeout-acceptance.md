@@ -14,7 +14,7 @@ This behavior differs materially from the separately documented official Windows
 
 ## Runtime provenance
 
-- Bundled executable: `C:\Users\aydin\AppData\Local\OpenAI\Codex\bin\7537f22ba194f7c1\codex.exe`
+- Bundled executable: `<CODEX_BUNDLED_BIN>\codex.exe`
 - Runtime-reported version: `codex-cli 0.152.0`
 - Executable SHA-256: `E46F188BB3FA90FE3E05835401FACCE253CA0442E30F4B69F170BE696B43F3EC`
 - Executable length: `293066544` bytes

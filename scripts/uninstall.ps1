@@ -37,25 +37,37 @@ if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) {
 }
 
 $Manifest = Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
+if ($Manifest.schema_version -ne 1 -or $Manifest.toolkit -ne 'codex-engineering-kit') {
+    throw 'Invalid Codex Engineering Kit manifest identity.'
+}
 $Preserved = [System.Collections.Generic.List[string]]::new()
+$CodexHomePrefix = $CodexHome.TrimEnd('\', '/') + [System.IO.Path]::DirectorySeparatorChar
 
 foreach ($Skill in $Manifest.skills) {
-    $Target = Join-Path $CodexHome ([string]$Skill.path)
+    $Name = [string]$Skill.name
+    $RelativePath = ([string]$Skill.path).Replace('\', '/')
+    if ($Name -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or $RelativePath -ne "skills/$Name") {
+        throw "Invalid toolkit-owned skill path in manifest: $RelativePath"
+    }
+    $Target = [System.IO.Path]::GetFullPath((Join-Path $CodexHome $RelativePath))
+    if (-not $Target.StartsWith($CodexHomePrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Toolkit-owned path escapes Codex home: $RelativePath"
+    }
     if (-not (Test-Path -LiteralPath $Target -PathType Container)) { continue }
 
     $CurrentHash = Get-DirectoryTreeHash $Target
     if ($CurrentHash -ne [string]$Skill.tree_hash) {
-        $Preserved.Add([string]$Skill.path)
+        $Preserved.Add($RelativePath)
         Write-Warning "Preserving modified toolkit path: $Target"
         continue
     }
 
     if ($DryRun) {
-        Write-Host "REMOVE $($Skill.path)"
+        Write-Host "REMOVE $RelativePath"
     }
     else {
         Remove-Item -LiteralPath $Target -Recurse -Force
-        Write-Host "REMOVED $($Skill.path)"
+        Write-Host "REMOVED $RelativePath"
     }
 }
 

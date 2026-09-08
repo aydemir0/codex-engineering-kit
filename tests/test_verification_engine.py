@@ -11,7 +11,8 @@ from verification.git_checks import run_git_diff_check
 from verification.node import discover_node_steps
 from verification.process import ProcessResult
 from verification.python_project import discover_python_steps
-from verification.runner import verify_project
+from verification.model import VerificationReport, VerificationStep
+from verification.runner import report_record, verify_project
 from verification.security import scan_secret_patterns
 
 
@@ -431,6 +432,41 @@ class VerificationOrchestratorTests(unittest.TestCase):
         by_name = {step.name: step for step in report.steps}
         self.assertEqual(by_name["security"].status, "failed")
         self.assertEqual(report.status, "failed")
+
+    def test_verification_artifact_redacts_secrets_from_command_evidence(self) -> None:
+        report = VerificationReport(
+            schema_version=1,
+            project_type="node",
+            project_path=str(self.root),
+            package_manager="npm",
+            steps=(
+                VerificationStep(
+                    name="tests",
+                    command=["npm", "run", "test"],
+                    status="failed",
+                    exit_code=1,
+                    duration_ms=1,
+                    evidence=(
+                        "failure exposed sk-"
+                        + ("Z" * 24)
+                        + '\n{"sessionId":"private-session-json"}'
+                        + "\n-----BEGIN PRIVATE KEY-----\nSYNTHETIC_PRIVATE_BODY\n"
+                        + "-----END PRIVATE KEY-----"
+                        + '\n{"authorization":"Bearer opaque-fixture-bearer-value"}'
+                        + '\n{"path":"C:\\\\Users\\\\private-user\\\\secret.txt"}'
+                    ),
+                ),
+            ),
+            status="failed",
+        )
+
+        artifact = json.dumps(report_record(report))
+        self.assertNotRegex(artifact, r"sk-Z{24}")
+        self.assertNotIn("private-session-json", artifact)
+        self.assertNotIn("SYNTHETIC_PRIVATE_BODY", artifact)
+        self.assertNotIn("opaque-fixture-bearer-value", artifact)
+        self.assertNotIn("private-user", artifact)
+        self.assertIn("<redacted:sensitive>", artifact)
 
     def test_cli_json_is_sorted_writes_requested_output_and_failed_report_exits_one(self) -> None:
         fake_secret = "ghp_" + ("D" * 24)

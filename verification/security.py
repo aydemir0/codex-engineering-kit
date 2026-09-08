@@ -13,6 +13,33 @@ SECRET_PATTERNS = (
     re.compile(r"sk-(?:proj-)?[A-Za-z0-9_-]{20,}"),
     re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
 )
+SENSITIVE_TEXT_PATTERNS = (
+    re.compile(
+        r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----.*?"
+        r"-----END (?:RSA |EC |OPENSSH )?PRIVATE KEY-----",
+        re.DOTALL,
+    ),
+    *SECRET_PATTERNS,
+    re.compile(
+        r"authorization[\"']?\s*[:=]\s*[\"']?Bearer\s+[^\"\s,;}]+[\"']?",
+        re.IGNORECASE,
+    ),
+    re.compile(
+        r"[A-Za-z]:(?:\\{1,2})Users(?:\\{1,2})[^\s\"']+",
+        re.IGNORECASE,
+    ),
+    re.compile(r"/(?:Users|home)/[^/\s]+/[^\s\"']*"),
+    re.compile(
+        r"\bsession(?:Id|_id)[\"']?\s*[:=]\s*[\"']?[^\"\s,;}]+[\"']?",
+        re.IGNORECASE,
+    ),
+)
+
+
+def redact_sensitive_text(text: str) -> str:
+    for pattern in SENSITIVE_TEXT_PATTERNS:
+        text = pattern.sub("<redacted:sensitive>", text)
+    return text
 
 
 def _iter_files(project_path: Path):

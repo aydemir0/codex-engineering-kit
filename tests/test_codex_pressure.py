@@ -69,7 +69,7 @@ if len(args) >= 4 and args[:3] == ["exec", "--sandbox", "read-only"]:
         "verification": "required",
         "secret_material": False,
         "concurrency": 4,
-        "notes": "bounded fake Codex candidate",
+        "notes": os.environ.get("CEK_FAKE_CODEX_NOTES", "bounded fake Codex candidate"),
     }
     payload = json.dumps(candidate, sort_keys=True)
     if mode == "fenced":
@@ -259,6 +259,25 @@ class CodexPressureAcceptanceTests(unittest.TestCase):
         self.assertNotIn("pass@k", artifact)
         self.assertNotIn("pass^k", artifact)
         self.assertNotIn("reliability", artifact)
+
+    def test_artifact_redacts_machine_local_paths_and_session_identifiers(self) -> None:
+        os.environ["CEK_FAKE_CODEX_NOTES"] = (
+            "read C:\\Users\\private-user\\.codex\\auth.json "
+            "with sessionId=private-session"
+        )
+
+        run_authenticated_pressure(
+            self.codex,
+            self.repo,
+            self.one_case_dir(),
+            self.output,
+            case_timeout_seconds=2,
+        )
+
+        raw = self.output.read_text(encoding="utf-8")
+        self.assertNotIn("private-user", raw)
+        self.assertNotIn("private-session", raw)
+        self.assertIn("<redacted:sensitive>", raw)
 
 
 if __name__ == "__main__":

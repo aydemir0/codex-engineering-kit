@@ -8,11 +8,11 @@ SCHEMA_VERSION = 1
 
 
 def write_state(path: Path, kind: str, payload: dict[str, Any]) -> None:
-    record: dict[str, Any] = {
+    record: dict[str, Any] = dict(payload)
+    record.update({
         "schemaVersion": SCHEMA_VERSION,
         "kind": kind,
-    }
-    record.update(payload)
+    })
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.tmp")
     temporary.write_text(

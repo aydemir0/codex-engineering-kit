@@ -51,7 +51,25 @@ function Get-DirectoryTreeHash {
 function Read-Manifest {
     param([string]$Path)
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
-    return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+    $Manifest = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+    if ($Manifest.schema_version -ne 1 -or $Manifest.toolkit -ne 'codex-engineering-kit') {
+        throw 'Invalid Codex Engineering Kit manifest identity.'
+    }
+    $SeenNames = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    foreach ($Skill in @($Manifest.skills)) {
+        $Name = [string]$Skill.name
+        $RelativePath = ([string]$Skill.path).Replace('\', '/')
+        $TreeHash = [string]$Skill.tree_hash
+        if (
+            $Name -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or
+            $RelativePath -ne "skills/$Name" -or
+            $TreeHash -notmatch '^[0-9a-fA-F]{64}$' -or
+            -not $SeenNames.Add($Name)
+        ) {
+            throw "Invalid toolkit-owned skill entry in manifest: $Name"
+        }
+    }
+    return $Manifest
 }
 
 function Get-ManifestSkill {
@@ -61,10 +79,10 @@ function Get-ManifestSkill {
 }
 
 function Backup-Target {
-    param([string]$Target, [string]$Name, [string]$Home)
+    param([string]$Target, [string]$Name, [string]$CodexHomePath)
     if (-not (Test-Path -LiteralPath $Target)) { return $null }
     $Stamp = Get-Date -Format 'yyyyMMdd-HHmmss-fff'
-    $BackupRoot = Join-Path $Home "backups/codex-engineering-kit/$Stamp/skills"
+    $BackupRoot = Join-Path $CodexHomePath "backups/codex-engineering-kit/$Stamp/skills"
     $BackupPath = Join-Path $BackupRoot $Name
     New-Item -ItemType Directory -Path $BackupRoot -Force | Out-Null
     Copy-Item -LiteralPath $Target -Destination $BackupPath -Recurse -Force
@@ -108,7 +126,7 @@ foreach ($Name in $SkillNames) {
         }
         else {
             if (-not $OwnedAndUnmodified) {
-                $Backup = Backup-Target -Target $Target -Name $Name -Home $CodexHome
+                $Backup = Backup-Target -Target $Target -Name $Name -CodexHomePath $CodexHome
                 Write-Host "Backed up $RelativeTarget to $Backup"
             }
             Remove-Item -LiteralPath $Target -Recurse -Force
