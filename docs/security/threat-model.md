@@ -29,7 +29,7 @@ Skills or repository scripts can cause commands to execute with the caller's per
 
 ### Destructive writes
 
-Mutable manifest data or unsafe instructions could select files outside CEK ownership. Installer conflicts are refused or backed up, uninstall requires a matching ownership hash, and manifest paths are constrained to the declared `skills/<name>` target beneath `CODEX_HOME`. Lifecycle tests use disposable paths. User-authorized tools and filesystem links remain external trust boundaries.
+Mutable manifest data, repository-controlled links, or unsafe instructions could select files outside CEK ownership. Installer conflicts are refused or backed up, uninstall requires a matching ownership hash, and manifest paths are constrained to the declared `skills/<name>` target beneath `CODEX_HOME`. Hook state rejects pre-existing link/reparse paths and uses an exclusively created temporary file before atomic replacement. Lifecycle tests use disposable paths. User-authorized tools and link-swap races remain external trust boundaries.
 
 ### Secrets and credentials
 
@@ -61,7 +61,7 @@ Typosquatted or mutable metadata can misrepresent publisher ownership or direct 
 
 ## Residual risks
 
-CEK does not sandbox project commands, exhaustively recognize secrets or prompt injection, constrain provider-side permissions, or establish the security of the Codex host and CI runners. Reparse-point behavior and administrator-modified local state remain local trust boundaries. These limits must not be converted into blanket security claims.
+CEK does not sandbox project commands, exhaustively recognize secrets or prompt injection, constrain provider-side permissions, or establish the security of the Codex host and CI runners. Time-of-check/time-of-use link swaps and administrator-modified local state remain local trust boundaries. These limits must not be converted into blanket security claims.
 
 ## Security verification
 

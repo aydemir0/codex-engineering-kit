@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import tempfile
 import time
 import unittest
@@ -12,6 +13,20 @@ from hooks.scripts.hook_dispatch import dispatch
 
 
 class HookDispatchBehaviorTests(unittest.TestCase):
+    def link_directory(self, link: Path, target: Path) -> None:
+        if os.name == "nt":
+            subprocess.run(
+                ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(target)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        else:
+            link.symlink_to(target, target_is_directory=True)
+
+    def link_file(self, link: Path, target: Path) -> None:
+        link.symlink_to(target)
+
     def payload(self, event: str, cwd: Path, **extra: object) -> dict[str, object]:
         base: dict[str, object] = {
             "hook_event_name": event,
@@ -205,6 +220,49 @@ class HookDispatchBehaviorTests(unittest.TestCase):
         self.assertNotIn("SUPER_SECRET_RESPONSE", evidence)
         self.assertNotIn("ignore prior instructions", evidence)
         self.assertNotIn("fixture-private-value", evidence)
+
+    def test_hook_rejects_reparse_state_directory_before_external_write(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cwd = root / "workspace"
+            outside = root / "outside"
+            (cwd / ".codex-kit").mkdir(parents=True)
+            outside.mkdir()
+            self.link_directory(cwd / ".codex-kit" / "hooks", outside)
+
+            with self.assertRaisesRegex(ValueError, "unsafe state path"):
+                dispatch(self.payload("PostToolUse", cwd))
+
+            self.assertFalse((outside / "events.jsonl").exists())
+
+    def test_pre_compact_does_not_follow_precreated_temporary_symlink(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cwd = root / "workspace"
+            state_dir = cwd / ".codex-kit" / "hooks"
+            state_dir.mkdir(parents=True)
+            outside = root / "outside.txt"
+            outside.write_text("preserve me", encoding="utf-8")
+            self.link_file(state_dir / ".compact-state.json.tmp", outside)
+
+            dispatch(self.payload("PreCompact", cwd, trigger="auto"))
+
+            self.assertEqual(outside.read_text(encoding="utf-8"), "preserve me")
+
+    def test_hook_rejects_linked_event_log_before_external_append(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            cwd = root / "workspace"
+            state_dir = cwd / ".codex-kit" / "hooks"
+            state_dir.mkdir(parents=True)
+            outside = root / "outside.txt"
+            outside.write_text("preserve me", encoding="utf-8")
+            self.link_file(state_dir / "events.jsonl", outside)
+
+            with self.assertRaisesRegex(ValueError, "unsafe state path"):
+                dispatch(self.payload("PostToolUse", cwd))
+
+            self.assertEqual(outside.read_text(encoding="utf-8"), "preserve me")
 
     def test_session_end_writes_cheap_snapshot_without_transcript(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

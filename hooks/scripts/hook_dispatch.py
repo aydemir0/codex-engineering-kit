@@ -11,7 +11,7 @@ PLUGIN_ROOT = Path(__file__).resolve().parents[2]
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
 
-from runtime.state import read_state, write_state
+from runtime.state import read_state, reject_unsafe_state_path, write_state
 
 SUPPORTED_EVENTS = {
     "SessionStart",
@@ -59,8 +59,12 @@ def _workspace_dir(payload: dict[str, Any]) -> Path:
 
 
 def _state_dir(payload: dict[str, Any]) -> Path:
-    state_dir = _workspace_dir(payload) / STATE_RELATIVE
-    state_dir.mkdir(parents=True, exist_ok=True)
+    state_dir = _workspace_dir(payload)
+    for part in STATE_RELATIVE.parts:
+        state_dir /= part
+        reject_unsafe_state_path(state_dir)
+        state_dir.mkdir(exist_ok=True)
+        reject_unsafe_state_path(state_dir)
     return state_dir
 
 
@@ -88,6 +92,7 @@ def _append_event(payload: dict[str, Any], **extra: Any) -> None:
     record = _safe_identity(payload)
     record.update(extra)
     events_path = _state_dir(payload) / "events.jsonl"
+    reject_unsafe_state_path(events_path)
     with events_path.open("a", encoding="utf-8", newline="\n") as handle:
         handle.write(json.dumps(record, sort_keys=True, separators=(",", ":")) + "\n")
 
