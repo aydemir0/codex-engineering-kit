@@ -1,7 +1,9 @@
 # CEK v1 WS4 Security Closure Evidence
 
-Date: 2026-09-09  
-Baseline: `e449cc754088efddc070f54f97887d7f834b2171`  
+Date: 2026-09-09
+
+Baseline: `e449cc754088efddc070f54f97887d7f834b2171`
+
 Implementation revision: `eacc3d077211a83d3d31eecee90a7e071db990b5`
 
 ## Assessment
