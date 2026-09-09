@@ -37,10 +37,11 @@ Source-of-truth release documents:
 | Capability | Evidence-bound status |
 | --- | --- |
 | Native `.codex-plugin` packaging + repo-local marketplace | Runtime-verified on Codex CLI 0.147.0; Desktop 0.152.0 remains separately tracked. |
-| Eight shipped skills | Implemented with deterministic content contracts. |
+| 8 plugin-native skills | Implemented with deterministic content contracts. |
 | Native hooks through default `hooks/hooks.json` discovery | Scoped CLI 0.147.0 evidence; SessionEnd and Desktop 0.152.0 remain limitations. |
 | Explicit manifest `hooks` override | Experimental/disposable helper exists; runtime acceptance is still blocked on both declared baselines. |
-| Project-local Codex-native subagents | Runtime-verified on CLI 0.147.0; Desktop 0.152.0 remains separately tracked. |
+| 8 project-local native agent definitions | `reviewer` and `explorer` have CLI 0.153.0 lifecycle evidence; the other definitions have deterministic contracts only. |
+| 9 parent-context role contracts | Implemented as orchestration references; they are not autonomous agents. |
 | Bounded state + compaction continuation | Runtime-verified on CLI 0.147.0; Desktop 0.152.0 remains separately tracked. |
 | Verification engine + deterministic eval tooling | Implemented and exercised by repository CI/contracts. |
 | Manual Git-worktree conflict-stop/cleanup acceptance | Implemented; this is not a claim about Codex-managed Desktop worktrees. |
@@ -62,6 +63,8 @@ frontend-patterns
 ```
 
 The domain packs are optional in routing terms: they are loaded when backend or frontend implementation/review evidence calls for them rather than being treated as universal guidance.
+
+The canonical shipped-asset inventory is `release_contracts/assets.json`. Skill `agents/openai.yaml` files are interface metadata, not agent definitions.
 
 ## Native Codex plugin structure
 
@@ -123,6 +126,8 @@ pwsh -NoProfile -File scripts/install.ps1
 
 Its ownership model uses deterministic hashes, refuses unsafe overwrite by default, and backs up forced replacements. This installer is a separate delivery path from the native plugin acceptance surface.
 
+The PowerShell installer owns six core skills; the optional domain packs are plugin-only.
+
 ## Native hooks and trust boundary
 
 v0.2 ships `hooks/hooks.json` and bounded hook handlers for lifecycle evidence, state/compaction, and narrow PreToolUse deny/allow guardrails.
@@ -133,7 +138,9 @@ Hooks are guardrails, not a sandbox or a substitute for Codex trust/review contr
 
 ## Native subagents and bounded state
 
-Project-local agent definitions live in `.codex/agents/`. CLI 0.147.0 evidence covers a real custom-agent lifecycle and bounded state/compaction continuation.
+Project-local agent definitions live in `.codex/agents/`. On CLI 0.153.0, distinct project-local lifecycle evidence exists for the shipped `reviewer` and `explorer`; the remaining definitions are contract-validated but not individually runtime-smoked.
+
+Plugin installation does not register custom agent roles on Codex CLI 0.153.0. Plugin-native custom agents are unsupported/deferred at that boundary; project-local provisioning is a separate mechanism. No Desktop behavior is inferred.
 
 `.codex-kit` runtime state is local/ignored and uses bounded schemas. Read-only agent instructions are policy guidance, not an operating-system sandbox.
 

@@ -13,6 +13,12 @@ For repository-scoped work, inspect repository-local instructions and the smalle
 
 Role references are operating contracts, not autonomous background agents. Use them to shape analysis and execution; never claim work happened in a separate agent unless the runtime actually performed it.
 
+## Reference roles vs native agents
+
+The nine files under `references/roles/` are parent-context contracts. The eight TOML files under the repository's `.codex/agents/` directory are separate project-local native agent definitions. Matching responsibilities across those classes are intentional overlap, not duplicate assets; `release_contracts/assets.json` records the mappings and unmatched assets.
+
+Plugin installation does not register custom agent roles on Codex CLI 0.153.0. A native agent claim therefore requires explicit project-local provisioning and runtime spawn evidence; loading a role reference in the parent context is never sufficient.
+
 ## Routing table
 
 | Intent | Primary role | Required companion |

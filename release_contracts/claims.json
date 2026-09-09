@@ -22,6 +22,8 @@
       "wording": "Eight shipped skills with narrow contracts",
       "state": "IMPLEMENTED",
       "implementationEvidence": [
+        "release_contracts/assets.json",
+        "tests/test_asset_stocktake.py",
         "tests/validate_content.py",
         "skills/backend-patterns/SKILL.md",
         "skills/frontend-patterns/SKILL.md"
@@ -29,7 +31,7 @@
       "runtimeEvidence": [],
       "runtimeScope": "",
       "limitation": "",
-      "publicWording": "The repository ships eight skills with deterministic content contracts."
+      "publicWording": "The repository ships eight plugin-native skills with deterministic content and stocktake contracts."
     },
     {
       "id": "native-hooks-default",
@@ -73,8 +75,11 @@
       "wording": "Project-local Codex-native subagents",
       "state": "VERIFIED",
       "implementationEvidence": [
+        "release_contracts/assets.json",
         ".codex/agents/reviewer.toml",
-        "tests/test_agent_contract.py"
+        ".codex/agents/explorer.toml",
+        "tests/test_agent_contract.py",
+        "tests/test_asset_stocktake.py"
       ],
       "runtimeEvidence": [
         "docs/research/evidence/codex-cli-0.147.0-native-reviewer-subagent-acceptance.md",
@@ -82,8 +87,8 @@
         "docs/research/evidence/codex-cli-0.153.0-v1-runtime-closure.md"
       ],
       "runtimeScope": "Codex CLI 0.147.0; Codex CLI 0.153.0",
-      "limitation": "Codex Desktop 0.152.0 native-subagent behavior remains blocked. On CLI 0.153.0 the project-local lifecycle, matching identity, and parent resume were observed; exact child response text propagation into the root JSONL stream was not observed.",
-      "publicWording": "Project-local Codex-native subagent lifecycle is runtime-verified on Codex CLI 0.147.0 and Codex CLI 0.153.0; Codex Desktop 0.152.0 remains separately blocked."
+      "limitation": "On CLI 0.153.0, only the project-local reviewer and explorer definitions have direct lifecycle evidence; the other six shipped definitions have deterministic contracts only. Plugin installation does not register custom agent roles on CLI 0.153.0. Codex Desktop behavior remains blocked and is not inferred.",
+      "publicWording": "Project-local reviewer and explorer lifecycle is runtime-verified on Codex CLI 0.153.0; plugin installation does not register custom agent roles there, the other six project-local definitions are contract-only, and no Codex Desktop behavior is inferred."
     },
     {
       "id": "state-compaction",

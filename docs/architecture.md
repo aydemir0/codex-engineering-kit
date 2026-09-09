@@ -6,7 +6,7 @@ Codex Engineering Kit (CEK) is an **independent** community project. It separate
 
 ## Current implemented baseline
 
-The current v0.2 implementation contains **8 shipped skills**:
+The current implementation contains **8 plugin-native skills**:
 
 - `backend-patterns`
 - `concurrency-performance`
@@ -17,7 +17,7 @@ The current v0.2 implementation contains **8 shipped skills**:
 - `software-architecture`
 - `verification-loop`
 
-It also contains **8 native subagents** under `.codex/agents/`:
+It also contains **8 project-local native agent definitions** under `.codex/agents/`:
 
 - `architect`
 - `build-resolver`
@@ -28,7 +28,9 @@ It also contains **8 native subagents** under `.codex/agents/`:
 - `reviewer`
 - `security-reviewer`
 
-Reference roles under `skills/orchestrator/references/roles/` are lightweight parent-context operating contracts. They are distinct from runtime-spawned native subagents and are not evidence that a separate agent executed.
+The **9 parent-context role contracts** under `skills/orchestrator/references/roles/` are lightweight parent-context operating contracts. They are distinct from runtime-spawned native subagents and are not evidence that a separate agent executed. Skill `agents/openai.yaml` files are interface metadata, not agent definitions.
+
+Plugin installation does not register custom agent roles on Codex CLI 0.153.0. At that boundary, plugin-native custom agents are unsupported/deferred; project-local definitions are a separate mechanism. Runtime lifecycle evidence exists for `reviewer` and `explorer`, while the other six definitions remain contract-only. No Desktop behavior is inferred.
 
 Primary implementation surfaces:
 

@@ -179,16 +179,17 @@
       "cli0153": {
         "status": "PASS",
         "evidence": [
-          "docs/research/evidence/codex-cli-0.153.0-v1-runtime-closure.md"
+          "docs/research/evidence/codex-cli-0.153.0-v1-runtime-closure.md",
+          "docs/research/evidence/codex-v1-representative-workflow.md"
         ],
-        "limitation": "Project-local subagent lifecycle and parent resume passed; exact child response text was not observed in the root JSONL stream."
+        "limitation": "Project-local explorer and reviewer lifecycle evidence passed. The other six definitions are contract-only. Plugin installation does not register custom agent roles on CLI 0.153.0."
       },
       "desktop0152": {
         "status": "BLOCKED",
         "evidence": [
           "docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md"
         ],
-        "limitation": "Exact Desktop 0.152.0 runtime is unavailable in the Plan F execution harness."
+        "limitation": "Exact Desktop 0.152.0 runtime is unavailable in the Plan F execution harness; no Desktop behavior is inferred."
       }
     },
     {

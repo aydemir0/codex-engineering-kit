@@ -33,15 +33,19 @@ pwsh -NoProfile -File tests/Test-Mcp.ps1
 
 ## Adding or changing skills
 
-v0.1 intentionally exposes exactly six active skills. Adding another active skill is an architectural change because every skill increases the visible skill surface and context budget.
+The shipped skill and agent surface is recorded in `release_contracts/assets.json`. Adding an active asset is an architectural change because every asset increases the visible contract surface and maintenance cost.
 
-A proposal for a new active skill should explain:
+A proposal for a new active skill or agent must include this admission evidence:
 
-- why an existing core skill or orchestrator reference cannot own the behavior;
-- expected trigger conditions;
-- overlap with existing skills;
-- why the context cost is justified;
-- validation and migration impact.
+- the concrete **workflow gap** that an existing skill, role, or agent cannot cover;
+- the **activation boundary** and expected trigger conditions;
+- an **overlap analysis** against `release_contracts/assets.json`;
+- a **context-cost rationale**;
+- a **tests/eval story** and migration impact;
+- a named **maintenance owner**;
+- the **public evidence impact** on claims and compatibility wording.
+
+`maintainer-local` helpers are not shipped assets and must not be imported or counted as product surface without completing this admission review.
 
 Every active skill must include:
 
@@ -81,7 +85,7 @@ Do not treat a workflow as an invisible hook. If behavior requires execution, ex
 
 ## PowerShell scripts
 
-v0.1 is PowerShell 7+ first-class.
+PowerShell 7+ is required only for the PowerShell installer, update, uninstall, and related Windows-oriented helper flows.
 
 Scripts that modify local state must:
 

@@ -32,7 +32,7 @@ class ArchitectureTruthContractTests(unittest.TestCase):
         self.assertTrue(skills)
         for skill in skills:
             self.assertIn(f"`{skill}`", text)
-        self.assertIn(f"{len(skills)} shipped skills", text)
+        self.assertIn(f"{len(skills)} plugin-native skills", text)
 
     def test_architecture_names_every_native_agent(self) -> None:
         text = ARCHITECTURE.read_text(encoding="utf-8")
@@ -40,7 +40,7 @@ class ArchitectureTruthContractTests(unittest.TestCase):
         self.assertTrue(agents)
         for agent in agents:
             self.assertIn(f"`{agent}`", text)
-        self.assertIn(f"{len(agents)} native subagents", text)
+        self.assertIn(f"{len(agents)} project-local native agent definitions", text)
 
     def test_architecture_removes_legacy_v01_primary_lifecycle(self) -> None:
         text = ARCHITECTURE.read_text(encoding="utf-8")
