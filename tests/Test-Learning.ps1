@@ -65,6 +65,12 @@ try {
             category = 'debugging_technique'
             evidence = @('{"authorization":"Bearer opaque-learning-token","path":"C:\\Users\\private-user\\auth.json"}')
             scope = 'general'
+        },
+        [ordered]@{
+            title = 'Serialized session observation'
+            category = 'debugging_technique'
+            evidence = @('{"sessionId":"private-session-json"}')
+            scope = 'general'
         }
     )
     $Observations | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $InputPath
@@ -76,7 +82,7 @@ try {
     Assert-True ($Result.candidates.Count -eq 1) 'exactly one reusable candidate must survive'
     Assert-True ($Result.candidates[0].promotion_status -eq 'pending_review') 'candidate must require review'
     Assert-True ($Result.candidates[0].contains_sensitive_data -eq $false) 'accepted candidate must be sanitized'
-    Assert-True ($Result.rejected.Count -eq 6) 'unsupported and sensitive observations must be rejected'
+    Assert-True ($Result.rejected.Count -eq 7) 'unsupported and sensitive observations must be rejected'
     Assert-True (($Result.rejected.reason -join ' ') -match 'unsupported category') 'simple typo must be rejected by category'
     Assert-True (($Result.rejected.reason -join ' ') -match 'sensitive') 'secret-bearing observation must be rejected'
     $Serialized = $Result | ConvertTo-Json -Depth 7
@@ -85,6 +91,7 @@ try {
     Assert-True ($Serialized -notmatch [regex]::Escape($CategoryToken)) 'secret category must be redacted'
     Assert-True ($Serialized -notmatch [regex]::Escape($PrivatePath)) 'machine-local path must not be persisted'
     Assert-True ($Serialized -notmatch 'private-session') 'session identifier must not be persisted'
+    Assert-True ($Serialized -notmatch 'private-session-json') 'serialized session identifier must not be persisted'
     Assert-True ($Serialized -notmatch 'opaque-learning-token') 'serialized bearer token must not be persisted'
     Assert-True ($Serialized -notmatch 'private-user') 'serialized machine-local path must not be persisted'
     Assert-True (-not (Test-Path -LiteralPath (Join-Path $TempRoot 'skills'))) 'learning must not auto-install skills'

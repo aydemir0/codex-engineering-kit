@@ -23,7 +23,7 @@ $SecretPatterns = @(
     'authorization\s*=\s*Bearer\s+\S+',
     '[A-Za-z]:(?:\\{1,2})Users(?:\\{1,2})[^\s]+',
     '/(?:Users|home)/[^/\s]+/',
-    '\bsession(?:Id|_id)\s*[:=]\s*\S+'
+    '\bsession(?:Id|_id)["'']?\s*[:=]\s*\S+'
 )
 
 if (-not (Test-Path -LiteralPath $InputPath -PathType Leaf)) {
