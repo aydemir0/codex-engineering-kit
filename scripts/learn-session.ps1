@@ -16,6 +16,7 @@ $AllowedCategories = @(
 )
 $SecretPatterns = @(
     'gh[pousr]_[A-Za-z0-9]{16,}',
+    'github_pat_[A-Za-z0-9_]{16,}',
     'sk-(?:proj-)?[A-Za-z0-9_-]{16,}',
     'BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY',
     'Authorization:\s*Bearer\s+\S+',

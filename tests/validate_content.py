@@ -26,6 +26,7 @@ REQUIRED_WORKFLOW_HEADINGS = (
 SECRET_PATTERNS = (
     re.compile(r"sk-[A-Za-z0-9]{16,}"),
     re.compile(r"ghp_[A-Za-z0-9]{16,}"),
+    re.compile(r"github_pat_[A-Za-z0-9_]{16,}"),
     re.compile(r"BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY"),
 )
 TEXT_SUFFIXES = {".md", ".yaml", ".yml", ".json", ".ps1", ".py", ".txt"}

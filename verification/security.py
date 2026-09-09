@@ -10,6 +10,7 @@ EXCLUDED_DIRS = {".git", ".codex-kit", "node_modules", "dist", "build", "coverag
 MAX_FILE_BYTES = 1_048_576
 SECRET_PATTERNS = (
     re.compile(r"gh[pousr]_[A-Za-z0-9]{20,}"),
+    re.compile(r"github_pat_[A-Za-z0-9_]{16,}"),
     re.compile(r"sk-(?:proj-)?[A-Za-z0-9_-]{20,}"),
     re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
 )

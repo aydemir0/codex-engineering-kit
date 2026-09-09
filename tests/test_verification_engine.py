@@ -449,6 +449,8 @@ class VerificationOrchestratorTests(unittest.TestCase):
                     evidence=(
                         "failure exposed sk-"
                         + ("Z" * 24)
+                        + "\nfine-grained github_pat_"
+                        + ("F" * 40)
                         + '\n{"sessionId":"private-session-json"}'
                         + "\n-----BEGIN PRIVATE KEY-----\nSYNTHETIC_PRIVATE_BODY\n"
                         + "-----END PRIVATE KEY-----"
@@ -462,6 +464,7 @@ class VerificationOrchestratorTests(unittest.TestCase):
 
         artifact = json.dumps(report_record(report))
         self.assertNotRegex(artifact, r"sk-Z{24}")
+        self.assertNotRegex(artifact, r"github_pat_F{40}")
         self.assertNotIn("private-session-json", artifact)
         self.assertNotIn("SYNTHETIC_PRIVATE_BODY", artifact)
         self.assertNotIn("opaque-fixture-bearer-value", artifact)

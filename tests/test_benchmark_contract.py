@@ -37,6 +37,7 @@ GENERATED_DIRS = {"node_modules", "__pycache__", ".next", "dist", "build"}
 SECRET_PATTERNS = (
     re.compile(r"sk-[A-Za-z0-9]{16,}"),
     re.compile(r"ghp_[A-Za-z0-9]{16,}"),
+    re.compile(r"github_pat_[A-Za-z0-9_]{16,}"),
     re.compile(r"BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY"),
 )
 ABSOLUTE_USER_PATHS = (

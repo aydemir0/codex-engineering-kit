@@ -17,6 +17,7 @@ PUBLIC_ARTIFACT_ROOTS = (
 )
 SECRET_PATTERNS = (
     re.compile(r"\bgh[pousr]_[A-Za-z0-9]{20,}\b"),
+    re.compile(r"\bgithub_pat_[A-Za-z0-9_]{16,}\b"),
     re.compile(r"\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b"),
     re.compile(
         r"authorization[\"']?\s*[:=]\s*[\"']?Bearer\s+[^\"\s,;}]+",
@@ -29,6 +30,10 @@ SECRET_PATTERNS = (
 
 
 class SecurityDocumentationContractTests(unittest.TestCase):
+    def test_public_artifact_patterns_cover_github_fine_grained_pats(self) -> None:
+        synthetic = "github_pat_" + ("F" * 40)
+        self.assertTrue(any(pattern.search(synthetic) for pattern in SECRET_PATTERNS))
+
     def test_threat_model_covers_every_ws4_family_and_non_sandbox_boundary(self) -> None:
         self.assertTrue(THREAT_MODEL.is_file(), "missing docs/security/threat-model.md")
         text = THREAT_MODEL.read_text(encoding="utf-8").casefold()
