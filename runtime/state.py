@@ -23,15 +23,34 @@ def reject_unsafe_state_path(path: Path) -> None:
         raise ValueError("unsafe state path")
 
 
+def _owned_state_ancestors(path: Path) -> list[Path]:
+    ancestors = list(reversed((path.parent, *path.parent.parents)))
+    for index, ancestor in enumerate(ancestors):
+        if ancestor.name.casefold() == ".codex-kit":
+            return ancestors[index:]
+    return [path.parent]
+
+
+def _ensure_safe_state_parent(path: Path) -> None:
+    ancestors = _owned_state_ancestors(path)
+    if len(ancestors) == 1:
+        reject_unsafe_state_path(path.parent)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        reject_unsafe_state_path(path.parent)
+        return
+    for ancestor in ancestors:
+        reject_unsafe_state_path(ancestor)
+        ancestor.mkdir(exist_ok=True)
+        reject_unsafe_state_path(ancestor)
+
+
 def write_state(path: Path, kind: str, payload: dict[str, Any]) -> None:
     record: dict[str, Any] = dict(payload)
     record.update({
         "schemaVersion": SCHEMA_VERSION,
         "kind": kind,
     })
-    reject_unsafe_state_path(path.parent)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    reject_unsafe_state_path(path.parent)
+    _ensure_safe_state_parent(path)
     reject_unsafe_state_path(path)
     descriptor, temporary_name = tempfile.mkstemp(
         dir=path.parent,
@@ -51,7 +70,8 @@ def write_state(path: Path, kind: str, payload: dict[str, Any]) -> None:
 
 def read_state(path: Path, expected_kind: str) -> tuple[dict[str, Any] | None, str | None]:
     try:
-        reject_unsafe_state_path(path.parent)
+        for ancestor in _owned_state_ancestors(path):
+            reject_unsafe_state_path(ancestor)
         reject_unsafe_state_path(path)
     except ValueError:
         return None, "unsafe-path"
