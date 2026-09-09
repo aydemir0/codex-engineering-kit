@@ -66,6 +66,8 @@ The domain packs are optional in routing terms: they are loaded when backend or 
 
 The canonical shipped-asset inventory is `release_contracts/assets.json`. Skill `agents/openai.yaml` files are interface metadata, not agent definitions.
 
+Here, plugin-native identifies the packaged skill class. Direct skill discovery on Codex CLI 0.153.0 remains `NOT_RUN`; file presence and packaging are not promoted to runtime-discovery evidence.
+
 ## Native Codex plugin structure
 
 ```text

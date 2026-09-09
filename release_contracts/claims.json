@@ -30,8 +30,8 @@
       ],
       "runtimeEvidence": [],
       "runtimeScope": "",
-      "limitation": "",
-      "publicWording": "The repository ships eight plugin-native skills with deterministic content and stocktake contracts."
+      "limitation": "Codex CLI 0.153.0 skill discovery was not directly observed; plugin-native describes the packaged asset class, not a runtime-discovery result.",
+      "publicWording": "The repository packages eight plugin-native skills with deterministic content and stocktake contracts; Codex CLI 0.153.0 skill discovery remains NOT_RUN."
     },
     {
       "id": "native-hooks-default",
@@ -84,7 +84,8 @@
       "runtimeEvidence": [
         "docs/research/evidence/codex-cli-0.147.0-native-reviewer-subagent-acceptance.md",
         "docs/research/evidence/codex-cli-0.147.0-plan-c-state-subagent-acceptance.md",
-        "docs/research/evidence/codex-cli-0.153.0-v1-runtime-closure.md"
+        "docs/research/evidence/codex-cli-0.153.0-v1-runtime-closure.md",
+        "docs/research/evidence/codex-v1-representative-workflow.md"
       ],
       "runtimeScope": "Codex CLI 0.147.0; Codex CLI 0.153.0",
       "limitation": "On CLI 0.153.0, only the project-local reviewer and explorer definitions have direct lifecycle evidence; the other six shipped definitions have deterministic contracts only. Plugin installation does not register custom agent roles on CLI 0.153.0. Codex Desktop behavior remains blocked and is not inferred.",

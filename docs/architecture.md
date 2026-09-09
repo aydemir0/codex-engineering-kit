@@ -32,6 +32,8 @@ The **9 parent-context role contracts** under `skills/orchestrator/references/ro
 
 Plugin installation does not register custom agent roles on Codex CLI 0.153.0. At that boundary, plugin-native custom agents are unsupported/deferred; project-local definitions are a separate mechanism. Runtime lifecycle evidence exists for `reviewer` and `explorer`, while the other six definitions remain contract-only. No Desktop behavior is inferred.
 
+For skills, plugin-native is a packaging classification. Direct Codex CLI 0.153.0 skill discovery remains `NOT_RUN` and is not inferred from packaged-file presence.
+
 Primary implementation surfaces:
 
 ```text

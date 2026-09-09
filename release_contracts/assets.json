@@ -2,7 +2,8 @@
   "schemaVersion": 1,
   "supportBoundary": {
     "runtime": "Codex CLI 0.153.0",
-    "pluginNativeSkills": "supported",
+    "pluginNativeSkills": "packaged",
+    "pluginNativeSkillDiscovery": "not-run",
     "projectLocalNativeAgents": "supported",
     "pluginNativeCustomAgents": "unsupported-deferred",
     "limitation": "Plugin installation does not register custom agent roles on Codex CLI 0.153.0."
@@ -34,7 +35,7 @@
       "outputContract": "Evidence-bound backend findings or implementation guidance.",
       "mutation": "Parent task controls writes.",
       "overlap": "Complements software-architecture for backend-specific evidence.",
-      "runtimeSupport": "plugin-native"
+      "runtimeSupport": "packaged-plugin-native"
     },
     {
       "id": "skill-concurrency-performance",
@@ -47,7 +48,7 @@
       "outputContract": "Measured diagnosis, bounded change, and verification evidence.",
       "mutation": "Parent task controls writes.",
       "overlap": "Owns concurrency and measurement details beyond general architecture.",
-      "runtimeSupport": "plugin-native"
+      "runtimeSupport": "packaged-plugin-native"
     },
     {
       "id": "skill-continuous-learning",
@@ -60,7 +61,7 @@
       "outputContract": "A sanitized pending-review candidate, never automatic promotion.",
       "mutation": "Writes only through the explicit review-gated learning workflow.",
       "overlap": "Does not replace documentation or add active skills automatically.",
-      "runtimeSupport": "plugin-native"
+      "runtimeSupport": "packaged-plugin-native"
     },
     {
       "id": "skill-eval-harness",
@@ -73,7 +74,7 @@
       "outputContract": "Versioned cases, graders, and explicit pass or failure evidence.",
       "mutation": "Parent task controls eval artifact writes.",
       "overlap": "Complements verification-loop without replacing project-native tests.",
-      "runtimeSupport": "plugin-native"
+      "runtimeSupport": "packaged-plugin-native"
     },
     {
       "id": "skill-frontend-patterns",
@@ -86,7 +87,7 @@
       "outputContract": "Evidence-bound frontend findings or implementation guidance.",
       "mutation": "Parent task controls writes.",
       "overlap": "Complements software-architecture for frontend-specific evidence.",
-      "runtimeSupport": "plugin-native"
+      "runtimeSupport": "packaged-plugin-native"
     },
     {
       "id": "skill-orchestrator",
@@ -99,7 +100,7 @@
       "outputContract": "Selected roles, evidence, work result, verification, and readiness state.",
       "mutation": "Delegated work retains its own mutation boundary.",
       "overlap": "Routes other assets; it is not an autonomous agent or universal knowledge pack.",
-      "runtimeSupport": "plugin-native"
+      "runtimeSupport": "packaged-plugin-native"
     },
     {
       "id": "skill-software-architecture",
@@ -112,7 +113,7 @@
       "outputContract": "Current state, proposed boundary, tradeoffs, migration, rollback, and verification.",
       "mutation": "Parent task controls writes.",
       "overlap": "Broader design skill; the architect role or agent supplies a focused operating context.",
-      "runtimeSupport": "plugin-native"
+      "runtimeSupport": "packaged-plugin-native"
     },
     {
       "id": "skill-verification-loop",
@@ -125,7 +126,7 @@
       "outputContract": "Executed checks, results, missing evidence, and readiness status.",
       "mutation": "Verification is read-only except for ordinary test artifacts.",
       "overlap": "Coordinates existing gates; it does not replace their tests or graders.",
-      "runtimeSupport": "plugin-native"
+      "runtimeSupport": "packaged-plugin-native"
     },
     {
       "id": "agent-architect",

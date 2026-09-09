@@ -168,7 +168,8 @@ class AssetStocktakeContractTests(unittest.TestCase):
         data = self.load_inventory()
         boundary = data.get("supportBoundary", {})
         self.assertEqual(boundary.get("runtime"), "Codex CLI 0.153.0")
-        self.assertEqual(boundary.get("pluginNativeSkills"), "supported")
+        self.assertEqual(boundary.get("pluginNativeSkills"), "packaged")
+        self.assertEqual(boundary.get("pluginNativeSkillDiscovery"), "not-run")
         self.assertEqual(boundary.get("projectLocalNativeAgents"), "supported")
         self.assertEqual(boundary.get("pluginNativeCustomAgents"), "unsupported-deferred")
         self.assertIn("does not register custom agent roles", boundary.get("limitation", ""))
@@ -176,7 +177,7 @@ class AssetStocktakeContractTests(unittest.TestCase):
         by_kind = {kind: [] for kind in KINDS}
         for record in self.records():
             by_kind[record["kind"]].append(record)
-        self.assertTrue(all(item["runtimeSupport"] == "plugin-native" for item in by_kind["plugin-native-skill"]))
+        self.assertTrue(all(item["runtimeSupport"] == "packaged-plugin-native" for item in by_kind["plugin-native-skill"]))
         self.assertTrue(all(item["runtimeSupport"] == "parent-context-only" for item in by_kind["parent-context-role-contract"]))
 
         agent_support = {item["name"]: item["runtimeSupport"] for item in by_kind["project-local-native-agent"]}
@@ -218,6 +219,10 @@ class AssetStocktakeContractTests(unittest.TestCase):
         self.assertIn("reviewer", agent_wording)
         self.assertIn("explorer", agent_wording)
         self.assertIn("does not register custom agent roles", agent_wording)
+        self.assertIn(
+            "docs/research/evidence/codex-v1-representative-workflow.md",
+            claims["native-subagents"]["runtimeEvidence"],
+        )
 
     def test_contribution_policy_has_no_stale_count_and_requires_admission_evidence(self) -> None:
         text = CONTRIBUTING.read_text(encoding="utf-8")
