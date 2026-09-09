@@ -1,8 +1,11 @@
 # CEK v1 WS5 Skill/Agent Stocktake Evidence
 
-Date: 2026-09-09  
-Baseline: `eea6f836ca995e23787cc3fd0309fb22de3792de`  
-Final implementation commit: `f3379f26ec0b8e2aa89adf9df13f3f43fc1bfb52`  
+Date: 2026-09-09
+
+Baseline: `eea6f836ca995e23787cc3fd0309fb22de3792de`
+
+Final implementation commit: `f3379f26ec0b8e2aa89adf9df13f3f43fc1bfb52`
+
 Branch: `feat/v1-core-workflow`
 
 ## Acceptance contract
