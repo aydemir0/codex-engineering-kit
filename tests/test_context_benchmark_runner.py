@@ -37,6 +37,10 @@ if args == ["--version"]:
 if args == ["exec", "--help"]:
     print("Usage: codex exec --json --ephemeral --ignore-user-config --ignore-rules --sandbox read-only --model MODEL --output-schema FILE")
     raise SystemExit(0)
+if "debug" in args and "prompt-input" in args:
+    marker = "<skills_instructions>private</skills_instructions>" if os.environ.get("CEK_FAKE_PROMPT_LEAK") else "clean prompt"
+    print(json.dumps({"input": marker}))
+    raise SystemExit(0)
 
 prompt = sys.stdin.read() if args[-1] == "-" else args[-1]
 if os.environ.get("CEK_EXPECT_ISOLATION") == "1":
@@ -45,6 +49,9 @@ if os.environ.get("CEK_EXPECT_ISOLATION") == "1":
         os.environ.get("USERPROFILE") != expected_profile
         or not noninteractive
         or "skip_host_skill_discovery" not in args
+        or "orchestrator.skills.enabled=false" not in args
+        or "skills.include_instructions=false" not in args
+        or any(name.startswith("CODEX_") and name != "CODEX_HOME" for name in os.environ)
     ):
         print("benchmark isolation missing", file=sys.stderr)
         raise SystemExit(8)
@@ -167,13 +174,14 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
         env["USERPROFILE"] = "C:\\Users\\private-profile"
         env["CEK_EXPECT_ISOLATION"] = "1"
         env["CEK_EXPECT_PROFILE"] = str(isolated_profile.resolve())
+        env["CODEX_SHELL"] = "C:\\private\\shell.exe"
+        env["CODEX_THREAD_ID"] = "private-parent-thread"
 
         record = self.run_campaign(
             smoke=True,
             environment=env,
             isolated_user_profile=isolated_profile,
         )
-
         self.assertEqual(record["runs"][0]["status"], "PASS")
         self.assertEqual(
             record["executionIsolation"],
@@ -181,14 +189,23 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
                 "approvalPolicy": "never",
                 "apps": "disabled",
                 "ephemeral": True,
-                "hostSkillDiscovery": "disabled",
+                "skipHostSkillDiscoveryFeature": "enabled",
+                "nativeSkillInstructions": "disabled",
+                "parentCodexEnvironment": "scrubbed",
                 "plugins": "disabled",
                 "rules": "ignored",
                 "sandbox": "read-only",
                 "userConfig": "ignored",
-                "userProfile": "disposable",
+                "userProfileEnvironment": "disposable",
             },
         )
+
+    def test_preflight_fails_closed_when_native_skills_enter_model_prompt(self) -> None:
+        env = os.environ.copy()
+        env["CEK_FAKE_PROMPT_LEAK"] = "1"
+
+        with self.assertRaisesRegex(RuntimeError, "model-visible skill isolation"):
+            self.run_campaign(smoke=True, environment=env)
 
     def test_full_campaign_writes_45_loader_compatible_measured_rows(self) -> None:
         record = self.run_campaign()
@@ -235,7 +252,7 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
         record = self.run_campaign()
         payload = json.loads(self.output.read_text(encoding="utf-8"))
         payload["candidateStable"] = True
-        payload["executionIsolation"]["userProfile"] = "inherited"
+        payload["executionIsolation"]["userProfileEnvironment"] = "inherited"
         self.output.write_text(json.dumps(payload), encoding="utf-8")
 
         with self.assertRaisesRegex(ValueError, "runtime isolation"):

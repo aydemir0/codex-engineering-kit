@@ -38,7 +38,9 @@ EXECUTION_ISOLATION = {
     "approvalPolicy": "never",
     "apps": "disabled",
     "ephemeral": True,
-    "hostSkillDiscovery": "disabled",
+    "skipHostSkillDiscoveryFeature": "enabled",
+    "nativeSkillInstructions": "disabled",
+    "parentCodexEnvironment": "scrubbed",
     "plugins": "disabled",
     "rules": "ignored",
     "sandbox": "read-only",
@@ -246,6 +248,35 @@ def _probe(
     required = ("--json", "--ephemeral", "--ignore-user-config", "--sandbox", "--output-schema")
     if error or exit_code != 0 or any(flag not in stdout for flag in required):
         raise RuntimeError("Codex exec capability probe failed")
+    exit_code, stdout, _, _, error = _run(
+        (
+            *codex_command,
+            "-c",
+            "orchestrator.skills.enabled=false",
+            "-c",
+            "skills.include_instructions=false",
+            "--disable",
+            "plugins",
+            "--disable",
+            "apps",
+            "--enable",
+            "skip_host_skill_discovery",
+            "debug",
+            "prompt-input",
+            "isolation-probe",
+        ),
+        cwd=repo_path,
+        timeout_seconds=15,
+        environment=environment,
+    )
+    model_prompt = stdout.casefold()
+    if (
+        error
+        or exit_code != 0
+        or "<skills_instructions" in model_prompt
+        or re.search(r"\.agents(?:\\+|/+)skills", model_prompt)
+    ):
+        raise RuntimeError("Codex model-visible skill isolation probe failed")
     return version
 
 
@@ -417,6 +448,10 @@ def _run_attempt(
             "--ephemeral",
             "--ignore-user-config",
             "--ignore-rules",
+            "-c",
+            "orchestrator.skills.enabled=false",
+            "-c",
+            "skills.include_instructions=false",
             "--enable",
             "skip_host_skill_discovery",
             "--color",
@@ -534,6 +569,10 @@ def run_context_benchmark(
     configurations = load_configurations(configuration_dir)
     fixture_commit = _verify_fixture_pins(repo_path, fixture_root, cases)
     env = dict(os.environ if environment is None else environment)
+    codex_home = env.get("CODEX_HOME")
+    env = {name: value for name, value in env.items() if not name.upper().startswith("CODEX_")}
+    if codex_home:
+        env["CODEX_HOME"] = codex_home
     if isolated_user_profile is not None:
         profile = isolated_user_profile.resolve()
         profile.mkdir(parents=True, exist_ok=True)
@@ -567,7 +606,7 @@ def run_context_benchmark(
         "retryPolicy": RETRY_POLICY,
         "executionIsolation": {
             **EXECUTION_ISOLATION,
-            "userProfile": "disposable" if isolated_user_profile is not None else "inherited",
+            "userProfileEnvironment": "disposable" if isolated_user_profile is not None else "inherited",
         },
         "runs": [],
     }
@@ -631,7 +670,10 @@ def validate_campaign_file(
         raise ValueError("authenticated benchmark methodology mismatch")
     if record.get("retryPolicy") != RETRY_POLICY or record.get("repetitions") != 3:
         raise ValueError("authenticated benchmark retry or repetition contract mismatch")
-    if record.get("executionIsolation") != {**EXECUTION_ISOLATION, "userProfile": "disposable"}:
+    if record.get("executionIsolation") != {
+        **EXECUTION_ISOLATION,
+        "userProfileEnvironment": "disposable",
+    }:
         raise ValueError("authenticated benchmark runtime isolation mismatch")
     for field in ("campaignId", "fixtureCommit", "codexVersion", "model", "reasoning"):
         if not isinstance(record.get(field), str) or not record[field].strip():
