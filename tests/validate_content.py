@@ -43,7 +43,7 @@ def read(path: Path) -> str:
 
 def shipped_text_files() -> list[Path]:
     files: list[Path] = []
-    ignored_parts = {".git", "docs", "tests", "examples"}
+    ignored_parts = {".git", ".codex-kit", "docs", "tests", "examples"}
     for path in ROOT.rglob("*"):
         if not path.is_file() or path.suffix.lower() not in TEXT_SUFFIXES:
             continue
