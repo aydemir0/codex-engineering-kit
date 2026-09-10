@@ -37,13 +37,14 @@ RETRY_POLICY = (
 EXECUTION_ISOLATION = {
     "approvalPolicy": "automatic-review",
     "apps": "disabled",
-    "ephemeral": True,
+    "ephemeral": False,
     "skipHostSkillDiscoveryFeature": "enabled",
     "nativeSkillInstructions": "disabled",
     "parentCodexEnvironment": "scrubbed",
     "plugins": "disabled",
     "rules": "ignored",
     "sandbox": "read-only",
+    "sessionStorage": "disposable CODEX_HOME",
     "userConfig": "ignored",
 }
 TOOL_ITEM_TYPES = {
@@ -444,7 +445,6 @@ def _run_attempt(
             "--approve-for-me",
             "exec",
             "--json",
-            "--ephemeral",
             "--ignore-user-config",
             "--ignore-rules",
             "-c",
