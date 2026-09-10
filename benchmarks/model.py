@@ -35,6 +35,7 @@ class BenchmarkCase:
     prompt: str
     invariants: tuple[str, ...]
     required_skill: str | None
+    evidence_checks: tuple[tuple[str, ...], ...]
 
 
 def _json_files(path: Path) -> tuple[Path, ...]:
@@ -78,6 +79,7 @@ def load_cases(path: Path) -> tuple[BenchmarkCase, ...]:
         prompt = record.get("prompt")
         invariants = record.get("invariants")
         required_skill = record.get("requiredSkill")
+        evidence_checks = record.get("evidenceChecks")
 
         if case_id in seen:
             raise ValueError(f"duplicate case id: {case_id}")
@@ -97,6 +99,17 @@ def load_cases(path: Path) -> tuple[BenchmarkCase, ...]:
             raise ValueError(f"case {case_id} requires at least two invariants")
         if required_skill != _CASE_PROTOCOL[case_id]:
             raise ValueError(f"required skill mismatch for case {case_id}")
+        if (
+            not isinstance(evidence_checks, list)
+            or len(evidence_checks) < 2
+            or not all(
+                isinstance(group, list)
+                and group
+                and all(isinstance(term, str) and term.strip() for term in group)
+                for group in evidence_checks
+            )
+        ):
+            raise ValueError(f"case {case_id} requires at least two evidence check groups")
 
         seen.add(case_id)
         commit_pins.add(repository_commit)
@@ -108,6 +121,9 @@ def load_cases(path: Path) -> tuple[BenchmarkCase, ...]:
                 prompt=prompt.strip(),
                 invariants=tuple(item.strip() for item in invariants),
                 required_skill=required_skill,
+                evidence_checks=tuple(
+                    tuple(term.strip() for term in group) for group in evidence_checks
+                ),
             )
         )
     if seen != set(_CASE_PROTOCOL):

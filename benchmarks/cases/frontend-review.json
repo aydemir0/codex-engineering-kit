@@ -7,5 +7,10 @@
     "Identify the client/server ownership issue.",
     "Identify at least one accessibility correctness issue with element-level evidence."
   ],
+  "evidenceChecks": [
+    ["app/page.tsx", "page.tsx"],
+    ["use client", "client component", "client/server"],
+    ["accessibility", "keyboard", "button"]
+  ],
   "requiredSkill": "frontend-patterns"
 }

@@ -1,6 +1,6 @@
-# Plan E Context Benchmark
+# CEK Context Benchmark
 
-This document defines the deterministic context-efficiency benchmark contract. It does not report a real benchmark result.
+This document defines the deterministic context benchmark contract and the authenticated v1 collection method. Results remain separate from methodology.
 
 ## Fixed configurations
 
@@ -27,6 +27,51 @@ Task PASS/FAIL outcomes remain task outcomes. The report generator does not prod
 `benchmarks/fixtures/results/complete-synthetic.json` and `incomplete-synthetic.json` exist only to test completeness and aggregation logic. Synthetic data and the report generator alone do not earn a `lean` claim. They must never be cited as measured benchmark evidence.
 
 Actual authenticated collection is a later operator campaign outside deterministic CI. Until a real complete 45-run campaign is collected under the fixed model/reasoning/runtime controls, the project does not promote a measured `lean` or context-efficiency result.
+
+## Authenticated v1 methodology
+
+The five fixed tasks are `backend-design`, `concurrency-pressure`, `frontend-review`, `node-small-bug`, and `repository-review`. Each case points to a fixture pinned at commit `1dbf382b6e838ca351c6fb8818a64aa793176198` and carries deterministic evidence-check groups. The runner rejects a fixture that differs from that pin.
+
+The three modes change only the declared context strategy:
+
+- A injects all eight shipped `SKILL.md` contracts into every task prompt.
+- B injects only the case's `requiredSkill`; `node-small-bug` receives no skill contract.
+- C injects no skill contract and requires a real project-local `explorer` spawn. A completed structured collaboration tool event for `spawn_agent` with `agent_type=explorer` is required; model prose is insufficient.
+
+Every attempt uses the same case prompt, response JSON schema, explicit model and reasoning setting, Codex CLI binary/version, read-only sandbox, disabled plugin/app loading, ignored user configuration/rules, and ephemeral session storage. Mode A/B disable multi-agent; mode C enables it. Prompts are sent through UTF-8 stdin. Attempts execute sequentially in deterministic case/configuration/repeat order against a fresh fixture copy.
+
+The v1 campaign configuration is:
+
+```text
+runtime: Codex CLI 0.153.0
+model: gpt-5.6-terra
+reasoning: medium
+timeout: 180 seconds per attempt
+repetitions: 3
+```
+
+The model identity is fixed by the explicit CLI argument; runtime version is captured from `codex --version`. A nonzero exit, timeout, malformed JSONL, absent completion/final response, missing C subagent lifecycle, or failed deterministic evidence checks produces a retained `FAIL` row.
+
+## Metrics and raw-data boundary
+
+Per attempt, the runner records:
+
+- CLI-reported input, cached-input, and output token counts from `turn.completed.usage` as `measured`; absent telemetry is `unavailable`, never estimated from text length;
+- wall-clock process duration from a monotonic clock as `measured`;
+- completed tool-call event count;
+- deterministic evidence-check outcome;
+- C subagent lifecycle outcome;
+- hashes of the raw capture and final response.
+
+Parent-only and child-only token counts remain `unavailable` unless the runtime exposes them separately. Aggregate reporting never merges `measured` and `unavailable` evidence.
+
+Raw JSONL/stderr captures remain under ignored local `.codex-kit/benchmarks/` storage. The publishable dataset contains measurements, classifications, and hashes only; it excludes prompts, responses, stdout/stderr, session identifiers, auth data, and machine-local paths.
+
+## Timeout and retry policy
+
+Each planned tuple receives exactly one attempt. Failed and timed-out attempts remain failures. There are no selective retries and no replacement rows. If the smoke proves a harness defect, the defect is fixed before methodology freeze. If a whole-campaign infrastructure defect is proven after counted collection begins, that campaign is invalidated and retained by hash; the entire 45-run campaign restarts under a new campaign ID.
+
+The one-attempt smoke uses `node-small-bug/B/1`, writes a separate non-counted artifact, and cannot be promoted into campaign data. The campaign candidate is frozen only after smoke passes and the runner, cases, configurations, skills, and explorer definition are committed. The runner records a methodology SHA-256 over those inputs and rejects candidate drift.
 
 ## Deterministic CI boundary
 

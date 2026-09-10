@@ -90,6 +90,8 @@ class BenchmarkProtocolTests(unittest.TestCase):
             self.assertEqual(item.repository_commit, FIXTURE_COMMIT)
             self.assertTrue(item.prompt.strip())
             self.assertGreaterEqual(len(item.invariants), 2)
+            self.assertGreaterEqual(len(item.evidence_checks), 2)
+            self.assertTrue(all(group and all(term.strip() for term in group) for group in item.evidence_checks))
             self.assertEqual(item.required_skill, EXPECTED_SKILLS[item.id])
 
     def test_complete_campaign_requires_three_repetitions(self) -> None:

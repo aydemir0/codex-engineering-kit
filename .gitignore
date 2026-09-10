@@ -3,6 +3,7 @@
 .codex-kit/hooks/
 .codex-kit/evals/
 .codex-kit/verification/
+.codex-kit/benchmarks/
 __pycache__/
 .env
 .env.*

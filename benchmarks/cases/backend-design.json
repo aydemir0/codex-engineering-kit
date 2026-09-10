@@ -7,5 +7,11 @@
     "Identify the idempotency and external side-effect boundary.",
     "Identify transaction ownership and partial-failure implications with file evidence."
   ],
+  "evidenceChecks": [
+    ["api.py"],
+    ["provider.charge", "provider charge"],
+    ["idempotency", "duplicate charge"],
+    ["transaction", "commit", "partial failure"]
+  ],
   "requiredSkill": "backend-patterns"
 }

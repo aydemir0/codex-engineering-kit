@@ -7,5 +7,10 @@
     "Identify the boundary defect with file/function evidence.",
     "Name the smallest affected function and keep the proposed change scoped to it."
   ],
+  "evidenceChecks": [
+    ["src/range.ts", "range.ts"],
+    ["rangeInclusive"],
+    ["inclusive", "off-by-one", "current < end", "<= end"]
+  ],
   "requiredSkill": null
 }

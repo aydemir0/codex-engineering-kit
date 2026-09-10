@@ -21,6 +21,13 @@ def _parser() -> argparse.ArgumentParser:
     report.add_argument("--cases", type=Path, required=True)
     report.add_argument("--configurations", type=Path, required=True)
     report.add_argument("--json", action="store_true", dest="as_json")
+
+    authenticated = subparsers.add_parser("validate-authenticated")
+    authenticated.add_argument("--runs", type=Path, required=True)
+    authenticated.add_argument("--cases", type=Path, required=True)
+    authenticated.add_argument("--configurations", type=Path, required=True)
+    authenticated.add_argument("--commit", required=True)
+    authenticated.add_argument("--methodology", required=True)
     return parser
 
 
@@ -33,6 +40,19 @@ def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     cases = load_cases(args.cases)
     configurations = load_configurations(args.configurations)
+
+    if args.command == "validate-authenticated":
+        from scripts.acceptance.context_benchmark import validate_campaign_file
+
+        report = validate_campaign_file(
+            args.runs,
+            args.cases,
+            args.configurations,
+            expected_commit=args.commit,
+            expected_methodology=args.methodology,
+        )
+        print(f"PASS: authenticated benchmark complete ({report.observed_runs} measured runs)")
+        return 0
 
     if args.command == "validate":
         attempts = planned_attempt_count(cases, configurations, repetitions=3)

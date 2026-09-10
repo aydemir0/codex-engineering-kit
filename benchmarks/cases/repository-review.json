@@ -7,5 +7,12 @@
     "Identify the cross-file retry/transaction mismatch with evidence from both files.",
     "Identify the swallowed storage error and its effect on caller-visible behavior."
   ],
+  "evidenceChecks": [
+    ["service.py"],
+    ["storage.py"],
+    ["retry", "retries", "three attempts"],
+    ["transaction", "commit"],
+    ["DatabaseError", "swallow", "returns False", "return false"]
+  ],
   "requiredSkill": "orchestrator"
 }
