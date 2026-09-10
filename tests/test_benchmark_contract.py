@@ -202,6 +202,7 @@ class PlanEStaticContractTests(unittest.TestCase):
         self.assertIn("synthetic", lowered)
         self.assertIn("do not earn a `lean` claim", lowered)
         self.assertIn(FIXTURE_COMMIT, text)
+        self.assertIn("runtime: Codex CLI 0.153.0", text)
 
     def test_plan_e_ci_matrix_and_commands_are_exact(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
