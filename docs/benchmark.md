@@ -36,14 +36,16 @@ The three modes change only the declared context strategy:
 
 - A injects all eight shipped `SKILL.md` contracts into every task prompt.
 - B injects only the case's `requiredSkill`; `node-small-bug` receives no skill contract.
-- C injects no skill contract and requires a real project-local `explorer` spawn. A completed structured collaboration tool event for `spawn_agent` with `agent_type=explorer` is required; model prose is insufficient.
+- C injects no skill contract and provisions the shipped project-local `explorer` definition. A paired CLI JSONL `collab_tool_call` wait lifecycle with the same call identity and a non-empty sender identity is required; model prose alone is insufficient. CLI 0.153.4 does not expose the child role/type in that JSONL event, so the benchmark does not claim runtime role evidence beyond the provisioned asset and structured collaboration lifecycle.
 
-Every attempt uses the same case prompt, response JSON schema, explicit model and reasoning setting, Codex CLI binary/version, read-only sandbox, disabled plugin/app loading, ignored user configuration/rules, and ephemeral session storage. Mode A/B disable multi-agent; mode C enables it. Prompts are sent through UTF-8 stdin. Attempts execute sequentially in deterministic case/configuration/repeat order against a fresh fixture copy.
+Every attempt uses the same case prompt, response JSON schema, explicit model and reasoning setting, Codex CLI binary/version, read-only sandbox, `never` non-interactive approval policy, disabled plugin/app loading, disabled host-skill discovery, ignored user configuration/rules, disposable `CODEX_HOME` and Windows user profile, and ephemeral session storage. Mode A/B disable multi-agent; mode C enables it. Prompts are sent through UTF-8 stdin. Attempts execute sequentially in deterministic case/configuration/repeat order against a fresh fixture copy.
+
+Before authenticated execution, the candidate and fixture pins are verified in the source worktree and a detached sparse capsule is created at the same candidate SHA. The authenticated runner receives only the five fixture trees, fixed case/configuration files, eight required `SKILL.md` files, the project-local explorer contract, and the minimum local runner modules. Repository files outside that allowlist are not materialized in the capsule.
 
 The v1 campaign configuration is:
 
 ```text
-runtime: Codex CLI 0.153.0
+runtime: Codex CLI 0.153.4
 model: gpt-5.6-terra
 reasoning: medium
 timeout: 180 seconds per attempt

@@ -34,7 +34,22 @@ RETRY_POLICY = (
     "One attempt per planned tuple; no selective retries. A proven whole-campaign "
     "infrastructure defect invalidates the campaign and requires a new campaign ID."
 )
-TOOL_ITEM_TYPES = {"command_execution", "mcp_tool_call", "collaboration_tool_call"}
+EXECUTION_ISOLATION = {
+    "approvalPolicy": "never",
+    "apps": "disabled",
+    "ephemeral": True,
+    "hostSkillDiscovery": "disabled",
+    "plugins": "disabled",
+    "rules": "ignored",
+    "sandbox": "read-only",
+    "userConfig": "ignored",
+}
+TOOL_ITEM_TYPES = {
+    "command_execution",
+    "mcp_tool_call",
+    "collaboration_tool_call",
+    "collab_tool_call",
+}
 HEX_40 = re.compile(r"^[0-9a-f]{40}$")
 HEX_64 = re.compile(r"^[0-9a-f]{64}$")
 RESPONSE_SCHEMA = {
@@ -214,7 +229,7 @@ def _probe(
     environment: dict[str, str],
 ) -> str:
     exit_code, stdout, _, _, error = _run(
-        (*codex_command, "--version"),
+        (*codex_command, "-a", "never", "--version"),
         cwd=repo_path,
         timeout_seconds=15,
         environment=environment,
@@ -223,7 +238,7 @@ def _probe(
         raise RuntimeError("Codex version probe failed")
     version = stdout.strip()
     exit_code, stdout, _, _, error = _run(
-        (*codex_command, "exec", "--help"),
+        (*codex_command, "-a", "never", "exec", "--help"),
         cwd=repo_path,
         timeout_seconds=15,
         environment=environment,
@@ -294,13 +309,29 @@ def _parse_events(events: list[dict[str, Any]]) -> dict[str, Any]:
     usage: dict[str, Any] | None = None
     tool_calls = 0
     subagent_lifecycle = False
+    subagent_evidence_type: str | None = None
+    collaboration_started: set[str] = set()
+    collaboration_completed: set[str] = set()
     for event in events:
         if event.get("type") == "turn.completed" and isinstance(event.get("usage"), dict):
             usage = event["usage"]
-        if event.get("type") != "item.completed" or not isinstance(event.get("item"), dict):
+        event_type = event.get("type")
+        if event_type not in {"item.started", "item.completed"} or not isinstance(
+            event.get("item"), dict
+        ):
             continue
         item = event["item"]
         item_type = item.get("type")
+        if item_type == "collab_tool_call" and item.get("tool") == "wait":
+            item_id = item.get("id")
+            sender = item.get("sender_thread_id")
+            if isinstance(item_id, str) and item_id and isinstance(sender, str) and sender:
+                if event_type == "item.started" and item.get("status") == "in_progress":
+                    collaboration_started.add(item_id)
+                if event_type == "item.completed" and item.get("status") == "completed":
+                    collaboration_completed.add(item_id)
+        if event_type != "item.completed":
+            continue
         if item_type == "agent_message" and isinstance(item.get("text"), str):
             final_text = item["text"]
         if item_type in TOOL_ITEM_TYPES:
@@ -312,11 +343,16 @@ def _parse_events(events: list[dict[str, Any]]) -> dict[str, Any]:
             and item.get("agent_type") == "explorer"
         ):
             subagent_lifecycle = True
+            subagent_evidence_type = "legacy-spawn-completion"
+    if collaboration_started.intersection(collaboration_completed):
+        subagent_lifecycle = True
+        subagent_evidence_type = "collab-wait-lifecycle"
     return {
         "finalText": final_text,
         "usage": usage,
         "toolCalls": tool_calls,
         "subagentLifecycle": subagent_lifecycle,
+        "subagentEvidenceType": subagent_evidence_type,
     }
 
 
@@ -374,11 +410,15 @@ def _run_attempt(
         feature = ("--enable", "multi_agent") if configuration.id == "C" else ("--disable", "multi_agent")
         command = (
             *codex_command,
+            "-a",
+            "never",
             "exec",
             "--json",
             "--ephemeral",
             "--ignore-user-config",
             "--ignore-rules",
+            "--enable",
+            "skip_host_skill_discovery",
             "--color",
             "never",
             "--sandbox",
@@ -457,6 +497,7 @@ def _run_attempt(
         "qualityPassed": quality_passed,
         "missingEvidenceChecks": missing_checks,
         "subagentLifecycle": parsed["subagentLifecycle"],
+        "subagentEvidenceType": parsed["subagentEvidenceType"],
         "eventCount": len(events),
         "captureSha256": _sha256(stdout, stderr),
         "finalResponseSha256": final_hash,
@@ -481,6 +522,7 @@ def run_context_benchmark(
     timeout_seconds: float,
     smoke: bool = False,
     environment: dict[str, str] | None = None,
+    isolated_user_profile: Path | None = None,
     verify_candidate: bool = False,
 ) -> dict[str, Any]:
     repo_path = repo_path.resolve()
@@ -492,6 +534,16 @@ def run_context_benchmark(
     configurations = load_configurations(configuration_dir)
     fixture_commit = _verify_fixture_pins(repo_path, fixture_root, cases)
     env = dict(os.environ if environment is None else environment)
+    if isolated_user_profile is not None:
+        profile = isolated_user_profile.resolve()
+        profile.mkdir(parents=True, exist_ok=True)
+        inherited_profile = env.get("USERPROFILE")
+        if inherited_profile and Path(inherited_profile).resolve() == profile:
+            raise ValueError("isolated user profile must differ from inherited USERPROFILE")
+        env["USERPROFILE"] = str(profile)
+        if profile.drive:
+            env["HOMEDRIVE"] = profile.drive
+            env["HOMEPATH"] = str(profile)[len(profile.drive) :]
     codex_version = _probe(codex_command, repo_path, env)
     attempts = planned_attempts(cases, configurations, 3)
     if smoke:
@@ -513,6 +565,10 @@ def run_context_benchmark(
         "timeoutSeconds": timeout_seconds,
         "repetitions": 3,
         "retryPolicy": RETRY_POLICY,
+        "executionIsolation": {
+            **EXECUTION_ISOLATION,
+            "userProfile": "disposable" if isolated_user_profile is not None else "inherited",
+        },
         "runs": [],
     }
     kind = SMOKE_KIND if smoke else KIND
@@ -575,6 +631,8 @@ def validate_campaign_file(
         raise ValueError("authenticated benchmark methodology mismatch")
     if record.get("retryPolicy") != RETRY_POLICY or record.get("repetitions") != 3:
         raise ValueError("authenticated benchmark retry or repetition contract mismatch")
+    if record.get("executionIsolation") != {**EXECUTION_ISOLATION, "userProfile": "disposable"}:
+        raise ValueError("authenticated benchmark runtime isolation mismatch")
     for field in ("campaignId", "fixtureCommit", "codexVersion", "model", "reasoning"):
         if not isinstance(record.get(field), str) or not record[field].strip():
             raise ValueError(f"authenticated benchmark missing {field}")
@@ -598,6 +656,11 @@ def validate_campaign_file(
             evidence = item.get(field)
             if not isinstance(evidence, dict) or evidence.get("source") not in {"measured", "unavailable"}:
                 raise ValueError("authenticated benchmark contains unsupported token evidence")
+        if item.get("configurationId") == "C" and (
+            item.get("subagentLifecycle") is not True
+            or item.get("subagentEvidenceType") != "collab-wait-lifecycle"
+        ):
+            raise ValueError("authenticated benchmark C run lacks structured subagent evidence")
 
     cases = load_cases(case_dir)
     configurations = load_configurations(configuration_dir)
@@ -624,6 +687,7 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--reasoning", required=True)
     parser.add_argument("--timeout", type=float, default=180.0)
     parser.add_argument("--codex-home", type=Path)
+    parser.add_argument("--isolated-user-profile", type=Path, required=True)
     parser.add_argument("--smoke", action="store_true")
     return parser
 
@@ -650,6 +714,7 @@ def main(argv: list[str] | None = None) -> int:
         timeout_seconds=args.timeout,
         smoke=args.smoke,
         environment=environment,
+        isolated_user_profile=args.isolated_user_profile,
         verify_candidate=True,
     )
     print(json.dumps({

@@ -28,6 +28,9 @@ import re
 import sys
 
 args = sys.argv[1:]
+noninteractive = args[:2] == ["-a", "never"]
+if noninteractive:
+    args = args[2:]
 if args == ["--version"]:
     print("codex-cli 0.153.0-test")
     raise SystemExit(0)
@@ -36,6 +39,15 @@ if args == ["exec", "--help"]:
     raise SystemExit(0)
 
 prompt = sys.stdin.read() if args[-1] == "-" else args[-1]
+if os.environ.get("CEK_EXPECT_ISOLATION") == "1":
+    expected_profile = os.environ["CEK_EXPECT_PROFILE"]
+    if (
+        os.environ.get("USERPROFILE") != expected_profile
+        or not noninteractive
+        or "skip_host_skill_discovery" not in args
+    ):
+        print("benchmark isolation missing", file=sys.stderr)
+        raise SystemExit(8)
 case_id = re.search(r"Benchmark case: ([a-z-]+)", prompt).group(1)
 configuration_id = re.search(r"Benchmark configuration: ([ABC])", prompt).group(1)
 failing = os.environ.get("CEK_FAKE_FAIL_TUPLE")
@@ -54,7 +66,9 @@ answers = {
 response = json.dumps({"findings": [{"claim": answers[case_id][0], "evidence": answers[case_id]}], "verification": ["fixture inspection"]})
 print(json.dumps({"type": "thread.started", "thread_id": "private-session-id"}))
 if configuration_id == "C":
-    print(json.dumps({"type": "item.completed", "item": {"type": "collaboration_tool_call", "tool": "spawn_agent", "status": "completed", "agent_type": "explorer"}}))
+    collaboration = {"type": "collab_tool_call", "id": "call-1", "tool": "wait", "sender_thread_id": "parent-1"}
+    print(json.dumps({"type": "item.started", "item": {**collaboration, "status": "in_progress"}}))
+    print(json.dumps({"type": "item.completed", "item": {**collaboration, "status": "completed"}}))
 print(json.dumps({"type": "item.completed", "item": {"type": "agent_message", "text": response}}))
 print(json.dumps({"type": "turn.completed", "usage": {"input_tokens": 101, "cached_input_tokens": 7, "output_tokens": 23}}))
 print("sk-THIS_VALUE_STAYS_ONLY_IN_LOCAL_RAW C:\\Users\\private-user sessionId=private", file=sys.stderr)
@@ -76,7 +90,14 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp.cleanup()
 
-    def run_campaign(self, *, smoke: bool = False, environment: dict[str, str] | None = None) -> dict:
+    def run_campaign(
+        self,
+        *,
+        smoke: bool = False,
+        environment: dict[str, str] | None = None,
+        isolated_user_profile: Path | None = None,
+    ) -> dict:
+        isolated_user_profile = isolated_user_profile or self.root / "isolated-user-profile"
         return run_context_benchmark(
             codex_command=(sys.executable, str(self.fake)),
             repo_path=ROOT,
@@ -94,6 +115,7 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
             timeout_seconds=5,
             smoke=smoke,
             environment=environment,
+            isolated_user_profile=isolated_user_profile,
         )
 
     def test_attempt_plan_is_exact_unique_and_deterministic(self) -> None:
@@ -136,7 +158,37 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
         self.assertEqual(len(record["runs"]), 1)
         self.assertEqual(record["runs"][0]["configurationId"], "C")
         self.assertTrue(record["runs"][0]["subagentLifecycle"])
+        self.assertEqual(record["runs"][0]["subagentEvidenceType"], "collab-wait-lifecycle")
         self.assertEqual(list(self.raw.glob("*.jsonl")).__len__(), 1)
+
+    def test_authenticated_process_uses_disposable_profile_and_noninteractive_policy(self) -> None:
+        isolated_profile = self.root / "isolated-user-profile"
+        env = os.environ.copy()
+        env["USERPROFILE"] = "C:\\Users\\private-profile"
+        env["CEK_EXPECT_ISOLATION"] = "1"
+        env["CEK_EXPECT_PROFILE"] = str(isolated_profile.resolve())
+
+        record = self.run_campaign(
+            smoke=True,
+            environment=env,
+            isolated_user_profile=isolated_profile,
+        )
+
+        self.assertEqual(record["runs"][0]["status"], "PASS")
+        self.assertEqual(
+            record["executionIsolation"],
+            {
+                "approvalPolicy": "never",
+                "apps": "disabled",
+                "ephemeral": True,
+                "hostSkillDiscovery": "disabled",
+                "plugins": "disabled",
+                "rules": "ignored",
+                "sandbox": "read-only",
+                "userConfig": "ignored",
+                "userProfile": "disposable",
+            },
+        )
 
     def test_full_campaign_writes_45_loader_compatible_measured_rows(self) -> None:
         record = self.run_campaign()
@@ -171,6 +223,22 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
         payload["candidateStable"] = False
         self.output.write_text(json.dumps(payload), encoding="utf-8")
         with self.assertRaisesRegex(ValueError, "candidate was not stable"):
+            validate_campaign_file(
+                self.output,
+                ROOT / "benchmarks" / "cases",
+                ROOT / "benchmarks" / "configurations",
+                expected_commit=self.commit,
+                expected_methodology=record["methodologySha256"],
+            )
+
+    def test_validator_rejects_nonisolated_runtime_metadata(self) -> None:
+        record = self.run_campaign()
+        payload = json.loads(self.output.read_text(encoding="utf-8"))
+        payload["candidateStable"] = True
+        payload["executionIsolation"]["userProfile"] = "inherited"
+        self.output.write_text(json.dumps(payload), encoding="utf-8")
+
+        with self.assertRaisesRegex(ValueError, "runtime isolation"):
             validate_campaign_file(
                 self.output,
                 ROOT / "benchmarks" / "cases",
