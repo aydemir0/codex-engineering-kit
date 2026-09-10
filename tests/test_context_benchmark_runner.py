@@ -28,9 +28,9 @@ import re
 import sys
 
 args = sys.argv[1:]
-noninteractive = args[:2] == ["-a", "never"]
+noninteractive = args[:1] == ["--approve-for-me"]
 if noninteractive:
-    args = args[2:]
+    args = args[1:]
 if args == ["--version"]:
     print("codex-cli 0.153.0-test")
     raise SystemExit(0)
@@ -186,7 +186,7 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
         self.assertEqual(
             record["executionIsolation"],
             {
-                "approvalPolicy": "never",
+                "approvalPolicy": "automatic-review",
                 "apps": "disabled",
                 "ephemeral": True,
                 "skipHostSkillDiscoveryFeature": "enabled",

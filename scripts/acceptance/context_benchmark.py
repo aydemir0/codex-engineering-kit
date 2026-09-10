@@ -35,7 +35,7 @@ RETRY_POLICY = (
     "infrastructure defect invalidates the campaign and requires a new campaign ID."
 )
 EXECUTION_ISOLATION = {
-    "approvalPolicy": "never",
+    "approvalPolicy": "automatic-review",
     "apps": "disabled",
     "ephemeral": True,
     "skipHostSkillDiscoveryFeature": "enabled",
@@ -231,7 +231,7 @@ def _probe(
     environment: dict[str, str],
 ) -> str:
     exit_code, stdout, _, _, error = _run(
-        (*codex_command, "-a", "never", "--version"),
+        (*codex_command, "--approve-for-me", "--version"),
         cwd=repo_path,
         timeout_seconds=15,
         environment=environment,
@@ -240,7 +240,7 @@ def _probe(
         raise RuntimeError("Codex version probe failed")
     version = stdout.strip()
     exit_code, stdout, _, _, error = _run(
-        (*codex_command, "-a", "never", "exec", "--help"),
+        (*codex_command, "--approve-for-me", "exec", "--help"),
         cwd=repo_path,
         timeout_seconds=15,
         environment=environment,
@@ -441,8 +441,7 @@ def _run_attempt(
         feature = ("--enable", "multi_agent") if configuration.id == "C" else ("--disable", "multi_agent")
         command = (
             *codex_command,
-            "-a",
-            "never",
+            "--approve-for-me",
             "exec",
             "--json",
             "--ephemeral",
