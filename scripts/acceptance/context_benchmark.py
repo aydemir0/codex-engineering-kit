@@ -496,7 +496,7 @@ def run_context_benchmark(
     attempts = planned_attempts(cases, configurations, 3)
     if smoke:
         case = next(item for item in cases if item.id == "node-small-bug")
-        configuration = next(item for item in configurations if item.id == "B")
+        configuration = next(item for item in configurations if item.id == "C")
         attempts = ((case, configuration, 1),)
 
     record: dict[str, Any] = {

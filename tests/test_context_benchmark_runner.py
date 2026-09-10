@@ -134,6 +134,8 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
         self.assertEqual(record["kind"], "authenticated-context-benchmark-smoke")
         self.assertFalse(record["counted"])
         self.assertEqual(len(record["runs"]), 1)
+        self.assertEqual(record["runs"][0]["configurationId"], "C")
+        self.assertTrue(record["runs"][0]["subagentLifecycle"])
         self.assertEqual(list(self.raw.glob("*.jsonl")).__len__(), 1)
 
     def test_full_campaign_writes_45_loader_compatible_measured_rows(self) -> None:

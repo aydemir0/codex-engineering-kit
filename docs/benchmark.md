@@ -71,7 +71,7 @@ Raw JSONL/stderr captures remain under ignored local `.codex-kit/benchmarks/` st
 
 Each planned tuple receives exactly one attempt. Failed and timed-out attempts remain failures. There are no selective retries and no replacement rows. If the smoke proves a harness defect, the defect is fixed before methodology freeze. If a whole-campaign infrastructure defect is proven after counted collection begins, that campaign is invalidated and retained by hash; the entire 45-run campaign restarts under a new campaign ID.
 
-The one-attempt smoke uses `node-small-bug/B/1`, writes a separate non-counted artifact, and cannot be promoted into campaign data. The campaign candidate is frozen only after smoke passes and the runner, cases, configurations, skills, and explorer definition are committed. The runner records a methodology SHA-256 over those inputs and rejects candidate drift.
+The one-attempt smoke uses `node-small-bug/C/1`, writes a separate non-counted artifact, and cannot be promoted into campaign data. This exercises the most complex mode and must prove a real explorer collaboration event. The campaign candidate is frozen only after smoke passes and the runner, cases, configurations, skills, and explorer definition are committed. The runner records a methodology SHA-256 over those inputs and rejects candidate drift.
 
 ## Deterministic CI boundary
 
