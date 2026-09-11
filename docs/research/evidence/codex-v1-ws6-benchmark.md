@@ -56,7 +56,7 @@ The three retained failures are `frontend-review/C` repetitions 1-3. Each had a 
 
 ## Sanitization and raw-data boundary
 
-The committed dataset is `benchmarks/results/ws6-cli01530-v2.json`. Its SHA-256 is `3d4d28d6f8e9e01d94d95836352005db657fe3e2d47712198c9c8f2be6e0cc8e`.
+The committed dataset is `benchmarks/results/ws6-cli01530-v2.json`. Its normalized LF SHA-256 is `d9a5d97381cc25fc80b33a8a3063af21aaa91bd6842efa74c6a4f37e9ce658c3`.
 
 Deterministic scans found no absolute user path, username, `auth.json`, session/thread identifier, raw prompt, stdout/stderr field, private-skill path, API key, token, or bearer-credential pattern in the committed dataset. Raw JSONL and stderr remain separate under ignored local benchmark storage. The final campaign has 90 raw files; its filename/hash manifest SHA-256 is `8ee165499fdfca018ff93f5ec8fb3802b666b013f73ad98d1f6f71d0684a2154`. No raw content is committed.
 

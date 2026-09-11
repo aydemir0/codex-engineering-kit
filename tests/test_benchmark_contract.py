@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import unittest
@@ -87,6 +88,11 @@ class WS6MeasuredEvidenceTests(unittest.TestCase):
             expected_methodology=WS6_METHODOLOGY,
         )
         payload = json.loads(WS6_RESULT.read_text(encoding="utf-8"))
+        normalized = WS6_RESULT.read_bytes().replace(b"\r\n", b"\n")
+        self.assertEqual(
+            hashlib.sha256(normalized).hexdigest(),
+            "d9a5d97381cc25fc80b33a8a3063af21aaa91bd6842efa74c6a4f37e9ce658c3",
+        )
         self.assertTrue(report.complete)
         self.assertEqual((report.expected_runs, report.observed_runs), (45, 45))
         self.assertEqual(sum(run["status"] == "PASS" for run in payload["runs"]), 42)
