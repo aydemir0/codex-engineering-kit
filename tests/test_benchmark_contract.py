@@ -8,6 +8,7 @@ from pathlib import Path
 
 from benchmarks.model import load_cases, load_configurations, planned_attempt_count
 from benchmarks.report import BenchmarkRun, TokenEvidence, build_report, load_run_records, report_record
+from scripts.acceptance.context_benchmark import validate_campaign_file
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES_ROOT = ROOT / "benchmarks" / "fixtures"
@@ -45,6 +46,9 @@ ABSOLUTE_USER_PATHS = (
     re.compile(r"/Users/"),
     re.compile(r"/home/[^/\s]+/"),
 )
+WS6_RESULT = ROOT / "benchmarks" / "results" / "ws6-cli01530-v2.json"
+WS6_COMMIT = "08576e25da4ef0c78950abe335ea64b85edd8671"
+WS6_METHODOLOGY = "7a1c00580ac07f3d23e7cfdeb596e8866ea569fb6e5e005c63ff42d13d0c60be"
 
 
 class BenchmarkFixtureTests(unittest.TestCase):
@@ -72,6 +76,49 @@ class BenchmarkFixtureTests(unittest.TestCase):
                 for pattern in SECRET_PATTERNS + ABSOLUTE_USER_PATHS:
                     self.assertIsNone(pattern.search(text), f"forbidden content in {path.relative_to(ROOT)}")
 
+
+class WS6MeasuredEvidenceTests(unittest.TestCase):
+    def test_authenticated_result_is_complete_measured_and_sanitized(self) -> None:
+        report = validate_campaign_file(
+            WS6_RESULT,
+            ROOT / "benchmarks" / "cases",
+            ROOT / "benchmarks" / "configurations",
+            expected_commit=WS6_COMMIT,
+            expected_methodology=WS6_METHODOLOGY,
+        )
+        payload = json.loads(WS6_RESULT.read_text(encoding="utf-8"))
+        self.assertTrue(report.complete)
+        self.assertEqual((report.expected_runs, report.observed_runs), (45, 45))
+        self.assertEqual(sum(run["status"] == "PASS" for run in payload["runs"]), 42)
+        self.assertEqual(sum(run["status"] == "FAIL" for run in payload["runs"]), 3)
+        self.assertTrue(
+            all(
+                run[field]["source"] == "measured"
+                for run in payload["runs"]
+                for field in ("inputTokens", "outputTokens", "cachedInputTokens")
+            )
+        )
+        serialized = json.dumps(payload, sort_keys=True)
+        for pattern in (*SECRET_PATTERNS, *ABSOLUTE_USER_PATHS):
+            self.assertIsNone(pattern.search(serialized))
+        for forbidden in ('"stdout"', '"stderr"', '"prompt"', '"finalText"', '"sessionId"'):
+            self.assertNotIn(forbidden, serialized)
+
+    def test_ws6_evidence_records_failures_and_reset_boundary(self) -> None:
+        text = (ROOT / "docs" / "research" / "evidence" / "codex-v1-ws6-benchmark.md").read_text(
+            encoding="utf-8"
+        )
+        for phrase in (
+            "42 PASS / 3 FAIL",
+            "Reset #1",
+            "after attempt 15",
+            "Reset #2 was not redeemed",
+            "no statistical significance claim",
+            "frontend-review/C",
+            WS6_COMMIT,
+            WS6_METHODOLOGY,
+        ):
+            self.assertIn(phrase, text)
 
 class BenchmarkProtocolTests(unittest.TestCase):
     def setUp(self) -> None:
