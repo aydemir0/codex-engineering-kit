@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "kind": "ws6-campaign-invalidation",
+  "campaignId": "ws6-cli01530-v2",
+  "datasetSha256": "d9a5d97381cc25fc80b33a8a3063af21aaa91bd6842efa74c6a4f37e9ce658c3",
+  "countedAttemptsRetained": 45,
+  "status": "INVALIDATED",
+  "reasonCodes": [
+    "subagent-lifecycle-false-positive",
+    "methodology-hash-not-platform-stable"
+  ]
+}

@@ -28,6 +28,10 @@ def _parser() -> argparse.ArgumentParser:
     authenticated.add_argument("--configurations", type=Path, required=True)
     authenticated.add_argument("--commit", required=True)
     authenticated.add_argument("--methodology", required=True)
+    authenticated.add_argument("--skills", type=Path, required=True)
+    authenticated.add_argument("--explorer-agent", type=Path, required=True)
+    authenticated.add_argument("--hook-manifest", type=Path, required=True)
+    authenticated.add_argument("--hook-dispatcher", type=Path, required=True)
     return parser
 
 
@@ -50,6 +54,10 @@ def main(argv: list[str] | None = None) -> int:
             args.configurations,
             expected_commit=args.commit,
             expected_methodology=args.methodology,
+            skill_root=args.skills,
+            explorer_agent=args.explorer_agent,
+            hook_manifest=args.hook_manifest,
+            hook_dispatcher=args.hook_dispatcher,
         )
         print(f"PASS: authenticated benchmark complete ({report.observed_runs} measured runs)")
         return 0

@@ -1,4 +1,4 @@
-# CEK v1 WS6 Authenticated Benchmark Evidence
+# CEK v1 WS6 Authenticated Benchmark Evidence — INVALIDATED CAMPAIGN
 
 Date: 2026-09-11
 
@@ -12,7 +12,7 @@ Branch: `feat/v1-core-workflow`
 
 WS6 requires five frozen repository tasks, three context modes, and three repetitions per task/mode: exactly 45 authenticated attempts. Each planned tuple receives one attempt. Failures, timeouts, and quota events remain failures; they are never silently replaced. Runtime/API token telemetry is the only accepted token measurement source.
 
-The modes are A always-loaded, B progressive disclosure, and C project-local isolated subagent. A passing C attempt requires a paired structured `collab_tool_call` lifecycle with matching identity. Model prose is not lifecycle evidence.
+The modes are A always-loaded, B progressive disclosure, and C project-local isolated subagent. A passing C attempt requires CEK hook evidence containing matching `SubagentStart` and `SubagentStop` child identity with `agentType = explorer`. A `wait` tool pair and model prose are not lifecycle evidence.
 
 ## Frozen runtime and provenance
 
@@ -25,19 +25,19 @@ The modes are A always-loaded, B progressive disclosure, and C project-local iso
 - Timeout: 180 seconds per attempt
 - Retry policy: one attempt per tuple; no selective retry
 - Execution: deterministic sequential case/configuration/repeat order
-- Isolation: read-only sandbox, automatic approval review, plugin/apps disabled, user config/rules ignored, host skill instructions excluded from model-visible input, disposable profile and `CODEX_HOME`
+- Isolation: read-only sandbox, automatic approval review, apps disabled, CEK plugin-native lifecycle hooks enabled, plugin skill instructions excluded, user config/rules ignored, host skill instructions excluded from model-visible input, disposable profile and `CODEX_HOME`
 
 The authenticated capsule materialized only the five frozen fixture trees, five case files, three configuration files, eight required CEK `SKILL.md` files, the shipped project-local explorer definition, and the minimum benchmark runner modules. The capsule contained 32 files and was clean at the candidate commit.
 
 ## Pre-counted smoke and campaign lineage
 
-The final non-counted smoke `ws6-smoke-v9` passed before the final campaign. It produced measured input/cached/output token telemetry, passed every deterministic quality group, and contained real `collab-wait-lifecycle` evidence. Its model-visible isolation checks found no host private-skill block or path.
+The former non-counted smoke `ws6-smoke-v9` is invalidated. It produced measured token telemetry and passed quality checks, but its `collab-wait-lifecycle` was only a parent `wait` pair with no child identity. It did not prove a real explorer subagent.
 
 An earlier counted campaign, `ws6-cli01530-v1`, is invalidated and not interpreted as the final benchmark. It retained all 45 attempts: 20 PASS and 25 quota-limit FAIL rows. The campaign also exposed a validator defect that rejected a valid failed C attempt merely because execution ended before a child lifecycle could exist. The defect was reproduced RED, fixed so lifecycle remains mandatory for every passing C attempt, and the entire campaign was restarted under a new ID. The invalidated sanitized dataset SHA-256 is `6d202fde29f84398e2b53381f61f06f774246cc295147bc9d11070aad491e51e`; its 90-file local raw manifest SHA-256 is `824e0294e393e968ab621e2b0a9f6ebf7d66deae9742e7011193783da2b98528`.
 
-## Final measured campaign
+## Invalidated measured campaign
 
-Campaign `ws6-cli01530-v2` contains exactly 45 unique counted attempts and validated with no completeness blocker. Outcome: 42 PASS / 3 FAIL.
+Campaign `ws6-cli01530-v2` retains exactly 45 unique counted attempts with an observed outcome of 42 PASS / 3 FAIL, but it is **INVALIDATED** and is not WS6 closure evidence. Independent review proved that its C-mode lifecycle parser accepted parent `wait` events without a spawned child and that its methodology hash depended on checkout line endings. The retained dataset is bound to `benchmarks/results/ws6-cli01530-v2-invalidated.json`; no counted row was deleted or replaced.
 
 | Mode | Attempts | PASS | FAIL | Input tokens median (range) | Output tokens median (range) | Duration median ms (range) | Tool calls median (range) |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -47,12 +47,12 @@ Campaign `ws6-cli01530-v2` contains exactly 45 unique counted attempts and valid
 
 All 45 input, cached-input, and output token fields have source `measured`. Parent-only and child-only token totals remain unavailable because CLI 0.153.0 did not expose that split.
 
-The three retained failures are `frontend-review/C` repetitions 1-3. Each had a real structured subagent lifecycle and measured telemetry but failed deterministic quality check 2: the final response did not include the required client/server ownership evidence. They were not rerun or replaced.
+The three retained failures are `frontend-review/C` repetitions 1-3. Each had measured telemetry but failed deterministic quality check 2: the final response did not include the required client/server ownership evidence. None of the v2 C rows has acceptable child lifecycle evidence, so v2 is not interpreted as a valid mode comparison.
 
 ## Reset boundary evidence
 
-- Reset #1 was redeemed only after attempt 15 completed. The account operation returned `reset`; no counted attempt was altered.
-- At attempt 30, the active five-hour window was 19% used. The remaining 15 attempts had the same mode composition as attempts 16-30 and could complete within the remaining capacity. Reset #2 was not redeemed, leaving one credit unused.
+- Reset #1 was redeemed only after attempt 15 completed. The account operation returned `reset`; no counted attempt was altered. The sanitized receipt in `benchmarks/results/ws6-reset-evidence.json` binds the operation to attempt 15's capture hash and the raw tool-result hash.
+- Reset #2 was not redeemed during v2 and remains available. It may be redeemed only after attempt 30 of the restarted frozen campaign and only if needed.
 
 ## Sanitization and raw-data boundary
 
@@ -62,15 +62,13 @@ Deterministic scans found no absolute user path, username, `auth.json`, session/
 
 ## Interpretation boundary
 
-For these five fixtures and this exact runtime, B and C recorded lower overall median input tokens than A. B retained 15/15 deterministic task passes with a duration median close to A. C recorded the lowest input/output/tool-call medians but the highest duration median and failed all three `frontend-review/C` quality checks.
-
-These are descriptive results from three repetitions per cell. There is no statistical significance claim, no general quality or latency superiority claim, and no benchmark-leadership claim. The unavailable parent/child token split also prevents a measured claim about where C-mode context was consumed.
+The v2 numbers are retained historical measurements from an invalidated methodology and are not interpreted as comparative results. There is no efficiency, context-reduction, latency, quality, or benchmark-leadership claim, and no statistical significance claim.
 
 This campaign did not test plugin skill discovery. It does not change WS5's `NOT_RUN` status for that separate surface and does not infer Codex Desktop behavior.
 
 ## Deterministic validation
 
-- `python -B -m benchmarks.cli validate-authenticated --runs .codex-kit/benchmarks/ws6-campaign-v2.json --cases benchmarks/cases --configurations benchmarks/configurations --commit 08576e25da4ef0c78950abe335ea64b85edd8671 --methodology 7a1c00580ac07f3d23e7cfdeb596e8866ea569fb6e5e005c63ff42d13d0c60be` — PASS, 45 measured runs.
+- The former v2 authenticated validation is superseded and must not be used as closure evidence; the corrected validator rejects its non-reproducible methodology hash.
 - `python -B -m benchmarks.cli report --runs .codex-kit/benchmarks/ws6-campaign-v2.json --cases benchmarks/cases --configurations benchmarks/configurations --json` — complete, expected 45, observed 45, blockers empty.
 - `python -B -m unittest tests.test_context_benchmark_runner tests.test_benchmark_contract -v` — 26 tests passed.
 - `python -B -m unittest discover -s tests -p 'test_*.py'` — 223 tests passed. Expected negative-fixture diagnostics were printed; the suite exited successfully.
@@ -84,4 +82,4 @@ This campaign did not test plugin skill discovery. It does not change WS5's `NOT
 
 ## Closure assessment
 
-This document records measured evidence and does not self-certify closure. The final handoff may mark WS6 closed only after exact change-boundary review, independent review, final validation, and disposable auth/runtime cleanup pass.
+**WS6 is NOT CLOSED.** A restarted campaign requires a fresh non-counted smoke with real hook `SubagentStart`/`SubagentStop` explorer evidence, followed by all 45 counted attempts under the corrected platform-stable methodology, deterministic validation, regressions, sanitization, independent review, and disposable auth/runtime cleanup.

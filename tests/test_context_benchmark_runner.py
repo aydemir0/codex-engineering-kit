@@ -12,6 +12,7 @@ from benchmarks.model import load_cases, load_configurations
 from benchmarks.report import build_report, load_run_records
 from scripts.acceptance.context_benchmark import (
     RETRY_POLICY,
+    _methodology_sha256,
     build_attempt_prompt,
     planned_attempts,
     run_context_benchmark,
@@ -26,6 +27,7 @@ import json
 import os
 import re
 import sys
+from pathlib import Path
 
 args = sys.argv[1:]
 noninteractive = args[:1] == ["--approve-for-me"]
@@ -77,6 +79,16 @@ if configuration_id == "C":
     collaboration = {"type": "collab_tool_call", "id": "call-1", "tool": "wait", "sender_thread_id": "parent-1"}
     print(json.dumps({"type": "item.started", "item": {**collaboration, "status": "in_progress"}}))
     print(json.dumps({"type": "item.completed", "item": {**collaboration, "status": "completed"}}))
+    if os.environ.get("CEK_FAKE_HOOK_MODE") != "missing":
+        work = Path(args[args.index("-C") + 1])
+        events = work / ".codex-kit" / "hooks" / "events.jsonl"
+        events.parent.mkdir(parents=True, exist_ok=True)
+        stop_id = "child-2" if os.environ.get("CEK_FAKE_HOOK_MODE") == "mismatch" else "child-1"
+        events.write_text(
+            json.dumps({"event": "SubagentStart", "sessionId": "parent-1", "agentId": "child-1", "agentType": "explorer"}) + "\n"
+            + json.dumps({"event": "SubagentStop", "sessionId": "parent-1", "agentId": stop_id, "agentType": "explorer"}) + "\n",
+            encoding="utf-8",
+        )
 print(json.dumps({"type": "item.completed", "item": {"type": "agent_message", "text": response}}))
 print(json.dumps({"type": "turn.completed", "usage": {"input_tokens": 101, "cached_input_tokens": 7, "output_tokens": 23}}))
 print("sk-THIS_VALUE_STAYS_ONLY_IN_LOCAL_RAW C:\\Users\\private-user sessionId=private", file=sys.stderr)
@@ -114,6 +126,8 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
             fixture_root=ROOT / "benchmarks" / "fixtures",
             skill_root=ROOT / "skills",
             explorer_agent=ROOT / ".codex" / "agents" / "explorer.toml",
+            hook_manifest=ROOT / "hooks" / "hooks.json",
+            hook_dispatcher=ROOT / "hooks" / "scripts" / "hook_dispatch.py",
             output_path=self.output,
             raw_dir=self.raw,
             cek_commit=self.commit,
@@ -132,6 +146,33 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
         self.assertEqual(len(keys), 45)
         self.assertEqual(len(set(keys)), 45)
         self.assertEqual(keys, sorted(keys))
+
+    def test_methodology_hash_normalizes_platform_line_endings(self) -> None:
+        hashes = []
+        for name, newline in (("lf", "\n"), ("crlf", "\r\n")):
+            root = self.root / name
+            paths = {
+                "case": root / "cases" / "case.json",
+                "configuration": root / "configurations" / "A.json",
+                "skill": root / "skills" / "sample" / "SKILL.md",
+                "agent": root / "agents" / "explorer.toml",
+                "manifest": root / "hooks" / "hooks.json",
+                "dispatcher": root / "hooks" / "hook_dispatch.py",
+            }
+            for path in paths.values():
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(f"first{newline}second{newline}".encode("utf-8"))
+            hashes.append(
+                _methodology_sha256(
+                    root / "cases",
+                    root / "configurations",
+                    root / "skills",
+                    paths["agent"],
+                    paths["manifest"],
+                    paths["dispatcher"],
+                )
+            )
+        self.assertEqual(hashes[0], hashes[1])
 
     def test_script_entrypoint_loads_from_repository_root(self) -> None:
         completed = subprocess.run(
@@ -166,8 +207,27 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
         self.assertEqual(len(record["runs"]), 1)
         self.assertEqual(record["runs"][0]["configurationId"], "C")
         self.assertTrue(record["runs"][0]["subagentLifecycle"])
-        self.assertEqual(record["runs"][0]["subagentEvidenceType"], "collab-wait-lifecycle")
-        self.assertEqual(list(self.raw.glob("*.jsonl")).__len__(), 1)
+        self.assertEqual(record["runs"][0]["subagentEvidenceType"], "hook-subagent-start-stop")
+        self.assertRegex(record["runs"][0]["lifecycleCaptureSha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(len([path for path in self.raw.glob("*.jsonl") if not path.name.endswith(".hooks.jsonl")]), 1)
+        self.assertEqual(list(self.raw.glob("*.hooks.jsonl")).__len__(), 1)
+
+    def test_wait_pair_without_hook_lifecycle_is_not_subagent_evidence(self) -> None:
+        env = os.environ.copy()
+        env["CEK_FAKE_HOOK_MODE"] = "missing"
+        record = self.run_campaign(smoke=True, environment=env)
+
+        self.assertEqual(record["runs"][0]["status"], "FAIL")
+        self.assertEqual(record["runs"][0]["failureKind"], "missing-subagent-lifecycle")
+        self.assertFalse(record["runs"][0]["subagentLifecycle"])
+
+    def test_mismatched_hook_child_identity_is_not_subagent_evidence(self) -> None:
+        env = os.environ.copy()
+        env["CEK_FAKE_HOOK_MODE"] = "mismatch"
+        record = self.run_campaign(smoke=True, environment=env)
+
+        self.assertEqual(record["runs"][0]["failureKind"], "missing-subagent-lifecycle")
+        self.assertFalse(record["runs"][0]["subagentLifecycle"])
 
     def test_authenticated_process_uses_disposable_profile_and_noninteractive_policy(self) -> None:
         isolated_profile = self.root / "isolated-user-profile"
@@ -193,7 +253,8 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
                 "skipHostSkillDiscoveryFeature": "enabled",
                 "nativeSkillInstructions": "disabled",
                 "parentCodexEnvironment": "scrubbed",
-                "plugins": "disabled",
+                "cekHooks": "plugin-native",
+                "pluginSkills": "excluded",
                 "rules": "ignored",
                 "sandbox": "read-only",
                 "sessionStorage": "disposable CODEX_HOME",
@@ -217,7 +278,10 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
         self.assertEqual(record["retryPolicy"], RETRY_POLICY)
         self.assertEqual(record["cekCommit"], self.commit)
         self.assertEqual(len(record["runs"]), 45)
-        self.assertEqual(len(list(self.raw.glob("*.jsonl"))), 45)
+        self.assertEqual(
+            len([path for path in self.raw.glob("*.jsonl") if not path.name.endswith(".hooks.jsonl")]),
+            45,
+        )
         self.assertTrue(report.complete)
         self.assertTrue(all(run.input_tokens.source == "measured" for run in runs))
         self.assertTrue(all(run.output_tokens.source == "measured" for run in runs))
@@ -233,6 +297,10 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
             ROOT / "benchmarks" / "configurations",
             expected_commit=self.commit,
             expected_methodology=record["methodologySha256"],
+            skill_root=ROOT / "skills",
+            explorer_agent=ROOT / ".codex" / "agents" / "explorer.toml",
+            hook_manifest=ROOT / "hooks" / "hooks.json",
+            hook_dispatcher=ROOT / "hooks" / "scripts" / "hook_dispatch.py",
         )
         self.assertTrue(validated.complete)
 
@@ -248,6 +316,10 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
                 ROOT / "benchmarks" / "configurations",
                 expected_commit=self.commit,
                 expected_methodology=record["methodologySha256"],
+                skill_root=ROOT / "skills",
+                explorer_agent=ROOT / ".codex" / "agents" / "explorer.toml",
+                hook_manifest=ROOT / "hooks" / "hooks.json",
+                hook_dispatcher=ROOT / "hooks" / "scripts" / "hook_dispatch.py",
             )
 
     def test_validator_rejects_nonisolated_runtime_metadata(self) -> None:
@@ -264,6 +336,10 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
                 ROOT / "benchmarks" / "configurations",
                 expected_commit=self.commit,
                 expected_methodology=record["methodologySha256"],
+                skill_root=ROOT / "skills",
+                explorer_agent=ROOT / ".codex" / "agents" / "explorer.toml",
+                hook_manifest=ROOT / "hooks" / "hooks.json",
+                hook_dispatcher=ROOT / "hooks" / "scripts" / "hook_dispatch.py",
             )
 
     def test_failure_is_retained_once_without_selective_retry(self) -> None:
@@ -297,8 +373,32 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
             ROOT / "benchmarks" / "configurations",
             expected_commit=self.commit,
             expected_methodology=record["methodologySha256"],
+            skill_root=ROOT / "skills",
+            explorer_agent=ROOT / ".codex" / "agents" / "explorer.toml",
+            hook_manifest=ROOT / "hooks" / "hooks.json",
+            hook_dispatcher=ROOT / "hooks" / "scripts" / "hook_dispatch.py",
         )
         self.assertTrue(validated.complete)
+
+    def test_validator_recomputes_methodology_instead_of_trusting_caller(self) -> None:
+        self.run_campaign()
+        payload = json.loads(self.output.read_text(encoding="utf-8"))
+        payload["candidateStable"] = True
+        payload["methodologySha256"] = "0" * 64
+        self.output.write_text(json.dumps(payload), encoding="utf-8")
+
+        with self.assertRaisesRegex(ValueError, "recomputed methodology"):
+            validate_campaign_file(
+                self.output,
+                ROOT / "benchmarks" / "cases",
+                ROOT / "benchmarks" / "configurations",
+                expected_commit=self.commit,
+                expected_methodology="0" * 64,
+                skill_root=ROOT / "skills",
+                explorer_agent=ROOT / ".codex" / "agents" / "explorer.toml",
+                hook_manifest=ROOT / "hooks" / "hooks.json",
+                hook_dispatcher=ROOT / "hooks" / "scripts" / "hook_dispatch.py",
+            )
 
     def test_sanitized_dataset_keeps_only_hashes_of_raw_capture(self) -> None:
         record = self.run_campaign(smoke=True)

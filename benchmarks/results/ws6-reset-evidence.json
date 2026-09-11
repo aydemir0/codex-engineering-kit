@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "ws6-usage-reset-evidence",
+  "authorizedCredits": 2,
+  "redeemedCredits": 1,
+  "availableCreditsObserved": 1,
+  "asOf": "2026-09-11T21:07:28Z",
+  "events": [
+    {
+      "sequence": 1,
+      "campaignId": "ws6-cli01530-v2",
+      "afterAttemptOrdinal": 15,
+      "precedingCaptureSha256": "9ef1616dd159754849416eace30c75c9f626e1b99d3e31c9292b00b41b44dd60",
+      "observedAt": "2026-09-11T16:51:10.484Z",
+      "outcome": "reset",
+      "availableCreditsAfter": 1,
+      "source": "codex-app-consume-usage-reset",
+      "rawToolOutputSha256": "5a550ccad88518a90d555ebf0cf2e42fc5e77fa8e14876c288b1cba5e12dd384"
+    }
+  ]
+}

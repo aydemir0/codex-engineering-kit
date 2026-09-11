@@ -41,7 +41,8 @@ EXECUTION_ISOLATION = {
     "skipHostSkillDiscoveryFeature": "enabled",
     "nativeSkillInstructions": "disabled",
     "parentCodexEnvironment": "scrubbed",
-    "plugins": "disabled",
+    "cekHooks": "plugin-native",
+    "pluginSkills": "excluded",
     "rules": "ignored",
     "sandbox": "read-only",
     "sessionStorage": "disposable CODEX_HOME",
@@ -156,19 +157,24 @@ def _methodology_sha256(
     configuration_dir: Path,
     skill_root: Path,
     explorer_agent: Path,
+    hook_manifest: Path,
+    hook_dispatcher: Path,
 ) -> str:
-    paths = [
-        *sorted(case_dir.glob("*.json")),
-        *sorted(configuration_dir.glob("*.json")),
-        *sorted(skill_root.glob("*/SKILL.md")),
-        explorer_agent,
-        Path(__file__),
+    sources = [
+        *((f"cases/{path.name}", path) for path in sorted(case_dir.glob("*.json"))),
+        *((f"configurations/{path.name}", path) for path in sorted(configuration_dir.glob("*.json"))),
+        *((f"skills/{path.parent.name}/SKILL.md", path) for path in sorted(skill_root.glob("*/SKILL.md"))),
+        ("agents/explorer.toml", explorer_agent),
+        ("hooks/hooks.json", hook_manifest),
+        ("hooks/scripts/hook_dispatch.py", hook_dispatcher),
+        ("scripts/acceptance/context_benchmark.py", Path(__file__)),
     ]
     digest = hashlib.sha256()
-    for path in paths:
-        digest.update(path.name.encode("utf-8"))
+    for label, path in sources:
+        digest.update(label.encode("utf-8"))
         digest.update(b"\x00")
-        digest.update(path.read_bytes())
+        text = path.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n")
+        digest.update(text.encode("utf-8"))
         digest.update(b"\x00")
     return digest.hexdigest()
 
@@ -257,8 +263,6 @@ def _probe(
             "-c",
             "skills.include_instructions=false",
             "--disable",
-            "plugins",
-            "--disable",
             "apps",
             "--enable",
             "skip_host_skill_discovery",
@@ -340,10 +344,6 @@ def _parse_events(events: list[dict[str, Any]]) -> dict[str, Any]:
     final_text: str | None = None
     usage: dict[str, Any] | None = None
     tool_calls = 0
-    subagent_lifecycle = False
-    subagent_evidence_type: str | None = None
-    collaboration_started: set[str] = set()
-    collaboration_completed: set[str] = set()
     for event in events:
         if event.get("type") == "turn.completed" and isinstance(event.get("usage"), dict):
             usage = event["usage"]
@@ -354,38 +354,52 @@ def _parse_events(events: list[dict[str, Any]]) -> dict[str, Any]:
             continue
         item = event["item"]
         item_type = item.get("type")
-        if item_type == "collab_tool_call" and item.get("tool") == "wait":
-            item_id = item.get("id")
-            sender = item.get("sender_thread_id")
-            if isinstance(item_id, str) and item_id and isinstance(sender, str) and sender:
-                if event_type == "item.started" and item.get("status") == "in_progress":
-                    collaboration_started.add(item_id)
-                if event_type == "item.completed" and item.get("status") == "completed":
-                    collaboration_completed.add(item_id)
         if event_type != "item.completed":
             continue
         if item_type == "agent_message" and isinstance(item.get("text"), str):
             final_text = item["text"]
         if item_type in TOOL_ITEM_TYPES:
             tool_calls += 1
-        if (
-            item_type == "collaboration_tool_call"
-            and item.get("tool") == "spawn_agent"
-            and item.get("status") == "completed"
-            and item.get("agent_type") == "explorer"
-        ):
-            subagent_lifecycle = True
-            subagent_evidence_type = "legacy-spawn-completion"
-    if collaboration_started.intersection(collaboration_completed):
-        subagent_lifecycle = True
-        subagent_evidence_type = "collab-wait-lifecycle"
     return {
         "finalText": final_text,
         "usage": usage,
         "toolCalls": tool_calls,
-        "subagentLifecycle": subagent_lifecycle,
-        "subagentEvidenceType": subagent_evidence_type,
     }
+
+
+def _hook_lifecycle(capture: bytes) -> tuple[bool, str | None]:
+    starts: list[tuple[str, str]] = []
+    stops: list[tuple[str, str]] = []
+    try:
+        lines = capture.decode("utf-8").splitlines()
+    except UnicodeDecodeError:
+        return False, None
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            return False, None
+        if not isinstance(event, dict):
+            return False, None
+        name = event.get("event")
+        agent_id = event.get("agentId")
+        agent_type = event.get("agentType")
+        session_id = event.get("sessionId")
+        if (
+            name not in {"SubagentStart", "SubagentStop"}
+            or not isinstance(agent_id, str)
+            or not agent_id
+            or agent_type != "explorer"
+            or not isinstance(session_id, str)
+            or not session_id
+        ):
+            continue
+        target = starts if name == "SubagentStart" else stops
+        target.append((agent_id, session_id))
+    matched = len(starts) == 1 and len(stops) == 1 and starts[0] == stops[0]
+    return matched, "hook-subagent-start-stop" if matched else None
 
 
 def _token(value: object) -> dict[str, object]:
@@ -429,6 +443,7 @@ def _run_attempt(
     timeout_seconds: float,
     environment: dict[str, str],
 ) -> dict[str, Any]:
+    hook_capture = b""
     with tempfile.TemporaryDirectory(prefix="cek-context-benchmark-") as temporary:
         work = Path(temporary)
         shutil.copytree(fixture_root / case.fixture, work, dirs_exist_ok=True)
@@ -482,11 +497,17 @@ def _run_attempt(
             environment=attempt_env,
             input_text=prompt,
         )
+        hook_path = work / ".codex-kit" / "hooks" / "events.jsonl"
+        if hook_path.is_file():
+            hook_capture = hook_path.read_bytes()
 
     raw_path = raw_dir / f"{ordinal:03d}-{case.id}-{configuration.id}-r{repeat}.jsonl"
     _write_raw(raw_path, stdout, stderr)
+    if configuration.id == "C":
+        raw_path.with_suffix(".hooks.jsonl").write_bytes(hook_capture)
     events, valid_jsonl = _events(stdout)
     parsed = _parse_events(events)
+    subagent_lifecycle, subagent_evidence_type = _hook_lifecycle(hook_capture)
     quality_passed, missing_checks = _quality(case, parsed["finalText"])
     usage = parsed["usage"] if isinstance(parsed["usage"], dict) else {}
 
@@ -501,7 +522,7 @@ def _run_attempt(
         failure_kind = "missing-completion"
     elif parsed["finalText"] is None:
         failure_kind = "missing-final-response"
-    elif configuration.id == "C" and not parsed["subagentLifecycle"]:
+    elif configuration.id == "C" and not subagent_lifecycle:
         failure_kind = "missing-subagent-lifecycle"
     elif not quality_passed:
         failure_kind = "quality-contract"
@@ -530,8 +551,10 @@ def _run_attempt(
         "subagentTokens": {"value": None, "source": "unavailable"},
         "qualityPassed": quality_passed,
         "missingEvidenceChecks": missing_checks,
-        "subagentLifecycle": parsed["subagentLifecycle"],
-        "subagentEvidenceType": parsed["subagentEvidenceType"],
+        "subagentLifecycle": subagent_lifecycle,
+        "subagentEvidenceType": subagent_evidence_type,
+        "subagentRoleEvidence": "explorer" if subagent_lifecycle else None,
+        "lifecycleCaptureSha256": hashlib.sha256(hook_capture).hexdigest() if hook_capture else None,
         "eventCount": len(events),
         "captureSha256": _sha256(stdout, stderr),
         "finalResponseSha256": final_hash,
@@ -547,6 +570,8 @@ def run_context_benchmark(
     fixture_root: Path,
     skill_root: Path,
     explorer_agent: Path,
+    hook_manifest: Path,
+    hook_dispatcher: Path,
     output_path: Path,
     raw_dir: Path,
     cek_commit: str,
@@ -595,7 +620,12 @@ def run_context_benchmark(
         "cekCommit": cek_commit,
         "fixtureCommit": fixture_commit,
         "methodologySha256": _methodology_sha256(
-            case_dir, configuration_dir, skill_root, explorer_agent
+            case_dir,
+            configuration_dir,
+            skill_root,
+            explorer_agent,
+            hook_manifest,
+            hook_dispatcher,
         ),
         "codexVersion": codex_version,
         "model": model,
@@ -653,6 +683,10 @@ def validate_campaign_file(
     *,
     expected_commit: str,
     expected_methodology: str,
+    skill_root: Path,
+    explorer_agent: Path,
+    hook_manifest: Path,
+    hook_dispatcher: Path,
 ) -> BenchmarkReport:
     record = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(record, dict):
@@ -665,7 +699,17 @@ def validate_campaign_file(
         raise ValueError("benchmark candidate was not stable")
     if not HEX_40.fullmatch(expected_commit) or record.get("cekCommit") != expected_commit:
         raise ValueError("authenticated benchmark commit mismatch")
-    if not HEX_64.fullmatch(expected_methodology) or record.get("methodologySha256") != expected_methodology:
+    recomputed_methodology = _methodology_sha256(
+        case_dir,
+        configuration_dir,
+        skill_root,
+        explorer_agent,
+        hook_manifest,
+        hook_dispatcher,
+    )
+    if record.get("methodologySha256") != recomputed_methodology:
+        raise ValueError("authenticated benchmark recomputed methodology mismatch")
+    if not HEX_64.fullmatch(expected_methodology) or expected_methodology != recomputed_methodology:
         raise ValueError("authenticated benchmark methodology mismatch")
     if record.get("retryPolicy") != RETRY_POLICY or record.get("repetitions") != 3:
         raise ValueError("authenticated benchmark retry or repetition contract mismatch")
@@ -699,7 +743,9 @@ def validate_campaign_file(
                 raise ValueError("authenticated benchmark contains unsupported token evidence")
         if item.get("status") == "PASS" and item.get("configurationId") == "C" and (
             item.get("subagentLifecycle") is not True
-            or item.get("subagentEvidenceType") != "collab-wait-lifecycle"
+            or item.get("subagentEvidenceType") != "hook-subagent-start-stop"
+            or item.get("subagentRoleEvidence") != "explorer"
+            or not HEX_64.fullmatch(item.get("lifecycleCaptureSha256", ""))
         ):
             raise ValueError("authenticated benchmark passing C run lacks structured subagent evidence")
 
@@ -711,6 +757,32 @@ def validate_campaign_file(
     return report
 
 
+def validate_usage_reset_evidence(path: Path) -> dict[str, Any]:
+    record = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(record, dict) or record.get("schemaVersion") != 1:
+        raise ValueError("invalid WS6 usage-reset evidence")
+    if record.get("kind") != "ws6-usage-reset-evidence" or record.get("authorizedCredits") != 2:
+        raise ValueError("invalid WS6 usage-reset authorization boundary")
+    events = record.get("events")
+    if not isinstance(events, list) or len(events) > 2:
+        raise ValueError("invalid WS6 usage-reset event count")
+    if record.get("redeemedCredits") != len(events):
+        raise ValueError("invalid WS6 usage-reset redeemed count")
+    for index, event in enumerate(events, start=1):
+        if not isinstance(event, dict):
+            raise ValueError("invalid WS6 usage-reset event")
+        if event.get("sequence") != index or event.get("afterAttemptOrdinal") != index * 15:
+            raise ValueError("invalid WS6 usage-reset attempt boundary")
+        if event.get("outcome") != "reset" or event.get("source") != "codex-app-consume-usage-reset":
+            raise ValueError("invalid WS6 usage-reset outcome")
+        for field in ("precedingCaptureSha256", "rawToolOutputSha256"):
+            if not HEX_64.fullmatch(event.get(field, "")):
+                raise ValueError("invalid WS6 usage-reset receipt hash")
+        if not isinstance(event.get("observedAt"), str) or not event["observedAt"].endswith("Z"):
+            raise ValueError("invalid WS6 usage-reset observation time")
+    return record
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run the authenticated CEK context benchmark.")
     parser.add_argument("--codex", type=Path, required=True)
@@ -720,6 +792,8 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--fixtures", type=Path, required=True)
     parser.add_argument("--skills", type=Path, required=True)
     parser.add_argument("--explorer-agent", type=Path, required=True)
+    parser.add_argument("--hook-manifest", type=Path, required=True)
+    parser.add_argument("--hook-dispatcher", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--raw-dir", type=Path, required=True)
     parser.add_argument("--cek-commit", required=True)
@@ -746,6 +820,8 @@ def main(argv: list[str] | None = None) -> int:
         fixture_root=args.fixtures,
         skill_root=args.skills,
         explorer_agent=args.explorer_agent,
+        hook_manifest=args.hook_manifest,
+        hook_dispatcher=args.hook_dispatcher,
         output_path=args.output,
         raw_dir=args.raw_dir,
         cek_commit=args.cek_commit,
