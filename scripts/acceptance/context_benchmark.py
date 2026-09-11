@@ -697,11 +697,11 @@ def validate_campaign_file(
             evidence = item.get(field)
             if not isinstance(evidence, dict) or evidence.get("source") not in {"measured", "unavailable"}:
                 raise ValueError("authenticated benchmark contains unsupported token evidence")
-        if item.get("configurationId") == "C" and (
+        if item.get("status") == "PASS" and item.get("configurationId") == "C" and (
             item.get("subagentLifecycle") is not True
             or item.get("subagentEvidenceType") != "collab-wait-lifecycle"
         ):
-            raise ValueError("authenticated benchmark C run lacks structured subagent evidence")
+            raise ValueError("authenticated benchmark passing C run lacks structured subagent evidence")
 
     cases = load_cases(case_dir)
     configurations = load_configurations(configuration_dir)

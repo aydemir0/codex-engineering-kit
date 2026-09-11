@@ -280,6 +280,26 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
         )
         self.assertEqual(failed[0]["failureKind"], "nonzero-exit")
 
+    def test_validator_accepts_failed_c_attempt_without_lifecycle(self) -> None:
+        env = os.environ.copy()
+        env["CEK_FAKE_FAIL_TUPLE"] = "node-small-bug/C/1"
+        record = self.run_campaign(environment=env)
+        payload = json.loads(self.output.read_text(encoding="utf-8"))
+        payload["candidateStable"] = True
+        self.output.write_text(json.dumps(payload), encoding="utf-8")
+
+        failed = next(item for item in payload["runs"] if item["status"] == "FAIL")
+        self.assertEqual(failed["configurationId"], "C")
+        self.assertFalse(failed["subagentLifecycle"])
+        validated = validate_campaign_file(
+            self.output,
+            ROOT / "benchmarks" / "cases",
+            ROOT / "benchmarks" / "configurations",
+            expected_commit=self.commit,
+            expected_methodology=record["methodologySha256"],
+        )
+        self.assertTrue(validated.complete)
+
     def test_sanitized_dataset_keeps_only_hashes_of_raw_capture(self) -> None:
         record = self.run_campaign(smoke=True)
         serialized = json.dumps(record, sort_keys=True)

@@ -54,7 +54,7 @@ timeout: 180 seconds per attempt
 repetitions: 3
 ```
 
-The model identity is fixed by the explicit CLI argument; runtime version is captured from `codex --version`. A nonzero exit, timeout, malformed JSONL, absent completion/final response, missing C subagent lifecycle, or failed deterministic evidence checks produces a retained `FAIL` row.
+The model identity is fixed by the explicit CLI argument; runtime version is captured from `codex --version`. A nonzero exit, timeout, malformed JSONL, absent completion/final response, missing C subagent lifecycle, or failed deterministic evidence checks produces a retained `FAIL` row. A failed C attempt remains a valid accounted failure even when execution stopped before a subagent lifecycle appeared; only a passing C attempt must carry the structured lifecycle evidence.
 
 ## Metrics and raw-data boundary
 
