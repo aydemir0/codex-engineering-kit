@@ -142,10 +142,12 @@ def build_attempt_prompt(
     elif configuration.id == "C":
         sections.append(
             "First call the collaboration list_agents tool exactly once to register this "
-            "disposable session. Then call the collaboration spawn_agent tool with agent_type "
-            "exactly \"explorer\" for repository inspection, wait for that child, and base the "
-            "final JSON on its returned evidence. Do not perform the fixture inspection in the "
-            "parent context."
+            "disposable session. Then call the collaboration spawn_agent tool for repository "
+            "inspection with JSON arguments that include \"agent_type\":\"explorer\", "
+            "\"fork_turns\":\"none\", and a task_name other than explorer. Setting task_name "
+            "to explorer without the required agent_type is invalid. Default agent fallback is "
+            "invalid. Wait for that child and base the final JSON on its returned evidence. Do "
+            "not perform the fixture inspection in the parent context."
         )
     return "\n\n".join(sections)
 
