@@ -512,7 +512,6 @@ def _run_attempt(
             *feature,
             "--output-schema",
             str(schema_path),
-            "--skip-git-repo-check",
             "-C",
             str(work),
             "-",

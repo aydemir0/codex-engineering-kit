@@ -58,6 +58,7 @@ if os.environ.get("CEK_EXPECT_ISOLATION") == "1":
         or not any(args[index : index + 2] == ["--enable", "plugins"] for index in range(len(args) - 1))
         or any(args[index : index + 2] == ["--disable", "plugins"] for index in range(len(args) - 1))
         or "--ignore-user-config" in args
+        or "--skip-git-repo-check" in args
         or not any(item.startswith('projects."') and item.endswith('.trust_level="trusted"') for item in args)
         or "--ephemeral" in args
         or any(name.startswith("CODEX_") and name != "CODEX_HOME" for name in os.environ)
