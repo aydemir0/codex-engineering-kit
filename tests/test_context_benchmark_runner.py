@@ -237,6 +237,7 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
         self.assertIn("name: backend-patterns", prompt_b)
         self.assertNotIn("name: frontend-patterns", prompt_b)
         self.assertNotIn("name: backend-patterns", prompt_c)
+        self.assertLess(prompt_c.index("list_agents"), prompt_c.index("spawn_agent"))
         self.assertIn('agent_type exactly "explorer"', prompt_c)
 
     def test_smoke_is_one_non_counted_attempt(self) -> None:

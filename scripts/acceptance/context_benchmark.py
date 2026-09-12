@@ -141,9 +141,11 @@ def build_attempt_prompt(
         )
     elif configuration.id == "C":
         sections.append(
-            "You must call the collaboration spawn_agent tool with agent_type exactly \"explorer\" "
-            "for repository inspection, wait for that child, and base the final JSON on its "
-            "returned evidence. Do not perform the fixture inspection in the parent context."
+            "First call the collaboration list_agents tool exactly once to register this "
+            "disposable session. Then call the collaboration spawn_agent tool with agent_type "
+            "exactly \"explorer\" for repository inspection, wait for that child, and base the "
+            "final JSON on its returned evidence. Do not perform the fixture inspection in the "
+            "parent context."
         )
     return "\n\n".join(sections)
 
