@@ -47,11 +47,12 @@ ABSOLUTE_USER_PATHS = (
     re.compile(r"/Users/"),
     re.compile(r"/home/[^/\s]+/"),
 )
-WS6_RESULT = ROOT / "benchmarks" / "results" / "ws6-cli01530-v2.json"
+WS6_RESULT = ROOT / "benchmarks" / "results" / "ws6-cli01530-v3.json"
+WS6_INVALIDATED_RESULT = ROOT / "benchmarks" / "results" / "ws6-cli01530-v2.json"
 WS6_INVALIDATION = ROOT / "benchmarks" / "results" / "ws6-cli01530-v2-invalidated.json"
 WS6_RESET_EVIDENCE = ROOT / "benchmarks" / "results" / "ws6-reset-evidence.json"
-WS6_COMMIT = "08576e25da4ef0c78950abe335ea64b85edd8671"
-WS6_METHODOLOGY = "7a1c00580ac07f3d23e7cfdeb596e8866ea569fb6e5e005c63ff42d13d0c60be"
+WS6_COMMIT = "d245ed987f016ac116d478cfe747cb2580360258"
+WS6_METHODOLOGY = "b2c7c83c62862c561d0d8adc361437726746763502bfbfdeb20139376a6c1738"
 
 
 class BenchmarkFixtureTests(unittest.TestCase):
@@ -81,22 +82,32 @@ class BenchmarkFixtureTests(unittest.TestCase):
 
 
 class WS6MeasuredEvidenceTests(unittest.TestCase):
-    def test_invalidated_authenticated_result_is_retained_and_sanitized(self) -> None:
+    def test_final_authenticated_result_is_complete_and_sanitized(self) -> None:
         payload = json.loads(WS6_RESULT.read_text(encoding="utf-8"))
         normalized = WS6_RESULT.read_bytes().replace(b"\r\n", b"\n")
         dataset_sha = hashlib.sha256(normalized).hexdigest()
         self.assertEqual(
             dataset_sha,
-            "d9a5d97381cc25fc80b33a8a3063af21aaa91bd6842efa74c6a4f37e9ce658c3",
+            "33761f665e5402d752e641cacbbfe1d5299835a3bd452a037acc7e9d6f5b3382",
         )
-        invalidation = json.loads(WS6_INVALIDATION.read_text(encoding="utf-8"))
-        self.assertEqual(invalidation["campaignId"], payload["campaignId"])
-        self.assertEqual(invalidation["datasetSha256"], dataset_sha)
-        self.assertEqual(invalidation["status"], "INVALIDATED")
-        self.assertEqual(invalidation["countedAttemptsRetained"], 45)
+        self.assertEqual(payload["campaignStatus"], "COMPLETE")
+        self.assertTrue(payload["candidateStable"])
         self.assertEqual(len(payload["runs"]), 45)
-        self.assertEqual(sum(run["status"] == "PASS" for run in payload["runs"]), 42)
-        self.assertEqual(sum(run["status"] == "FAIL" for run in payload["runs"]), 3)
+        self.assertEqual(sum(run["status"] == "PASS" for run in payload["runs"]), 34)
+        self.assertEqual(sum(run["status"] == "FAIL" for run in payload["runs"]), 11)
+        self.assertEqual(
+            {mode: sum(run["configurationId"] == mode for run in payload["runs"]) for mode in "ABC"},
+            {"A": 15, "B": 15, "C": 15},
+        )
+        self.assertTrue(
+            all(
+                run["subagentLifecycle"]
+                and run["subagentRoleEvidence"] == "explorer"
+                and run["subagentEvidenceType"] == "hook-subagent-start-stop"
+                for run in payload["runs"]
+                if run["configurationId"] == "C" and run["status"] == "PASS"
+            )
+        )
         self.assertTrue(
             all(
                 run[field]["source"] == "measured"
@@ -110,27 +121,46 @@ class WS6MeasuredEvidenceTests(unittest.TestCase):
         for forbidden in ('"stdout"', '"stderr"', '"prompt"', '"finalText"', '"sessionId"'):
             self.assertNotIn(forbidden, serialized)
 
-    def test_ws6_reset_receipt_is_machine_validated_and_bound_to_attempt_15(self) -> None:
+    def test_invalidated_authenticated_result_is_retained(self) -> None:
+        payload = json.loads(WS6_INVALIDATED_RESULT.read_text(encoding="utf-8"))
+        dataset_sha = hashlib.sha256(
+            WS6_INVALIDATED_RESULT.read_bytes().replace(b"\r\n", b"\n")
+        ).hexdigest()
+        invalidation = json.loads(WS6_INVALIDATION.read_text(encoding="utf-8"))
+        self.assertEqual(invalidation["campaignId"], payload["campaignId"])
+        self.assertEqual(invalidation["datasetSha256"], dataset_sha)
+        self.assertEqual(invalidation["status"], "INVALIDATED")
+        self.assertEqual(invalidation["countedAttemptsRetained"], 45)
+
+    def test_ws6_reset_receipts_are_machine_validated_and_bound_to_boundaries(self) -> None:
         reset = validate_usage_reset_evidence(WS6_RESET_EVIDENCE)
-        payload = json.loads(WS6_RESULT.read_text(encoding="utf-8"))
-        event = reset["events"][0]
-        self.assertEqual(event["campaignId"], payload["campaignId"])
+        invalidated = json.loads(WS6_INVALIDATED_RESULT.read_text(encoding="utf-8"))
+        final = json.loads(WS6_RESULT.read_text(encoding="utf-8"))
+        first, second = reset["events"]
+        self.assertEqual(first["campaignId"], invalidated["campaignId"])
         self.assertEqual(
-            event["precedingCaptureSha256"],
-            payload["runs"][event["afterAttemptOrdinal"] - 1]["captureSha256"],
+            first["precedingCaptureSha256"],
+            invalidated["runs"][first["afterAttemptOrdinal"] - 1]["captureSha256"],
         )
+        self.assertEqual(second["campaignId"], final["campaignId"])
+        self.assertEqual(second["afterAttemptOrdinal"], 30)
+        self.assertEqual(second["precedingCaptureSha256"], final["runs"][29]["captureSha256"])
+        self.assertEqual(second["observedCompletedAttemptOrdinal"], 31)
+        self.assertEqual(second["observedPrecedingCaptureSha256"], final["runs"][30]["captureSha256"])
         self.assertEqual(reset["availableCreditsObserved"], 1)
+        self.assertEqual(reset["redeemedCredits"], 2)
 
     def test_ws6_evidence_records_invalidation_and_reset_boundary(self) -> None:
         text = (ROOT / "docs" / "research" / "evidence" / "codex-v1-ws6-benchmark.md").read_text(
             encoding="utf-8"
         )
         for phrase in (
-            "42 PASS / 3 FAIL",
+            "34 PASS / 11 FAIL",
             "INVALIDATED",
             "Reset #1",
             "after attempt 15",
-            "Reset #2 was not redeemed",
+            "Reset #2",
+            "after attempt 31",
             "no statistical significance claim",
             "frontend-review/C",
             WS6_COMMIT,

@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "kind": "ws6-usage-reset-evidence",
   "authorizedCredits": 2,
-  "redeemedCredits": 1,
+  "redeemedCredits": 2,
   "availableCreditsObserved": 1,
-  "asOf": "2026-09-11T21:07:28Z",
+  "asOf": "2026-09-12T16:58:52Z",
   "events": [
     {
       "sequence": 1,
@@ -16,6 +16,19 @@
       "availableCreditsAfter": 1,
       "source": "codex-app-consume-usage-reset",
       "rawToolOutputSha256": "5a550ccad88518a90d555ebf0cf2e42fc5e77fa8e14876c288b1cba5e12dd384"
+    },
+    {
+      "sequence": 2,
+      "campaignId": "ws6-cli01530-v3",
+      "afterAttemptOrdinal": 30,
+      "precedingCaptureSha256": "dac7ddad2fe4d57031b01a16eadbb84be0df6bcc0818cb06798affd198326558",
+      "observedCompletedAttemptOrdinal": 31,
+      "observedPrecedingCaptureSha256": "ce3cd852827718f854afb341ff8c3e1e0e3d6c8f8f45bb620726fe1e0fb180e7",
+      "observedAt": "2026-09-12T16:41:52.698Z",
+      "outcome": "reset",
+      "availableCreditsAfter": 0,
+      "source": "codex-app-consume-usage-reset",
+      "rawToolOutputSha256": "262f556390a0cc2aaefdae7ac434a7d2e2103a88669738f1a018ea133e611b6c"
     }
   ]
 }
