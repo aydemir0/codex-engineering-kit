@@ -153,18 +153,20 @@
     },
     {
       "id": "context-benchmark-protocol",
-      "wording": "Fixed A/B/C context-efficiency benchmark protocol",
-      "state": "IMPLEMENTED",
+      "wording": "Fixed A/B/C authenticated benchmark protocol and measured campaign",
+      "state": "VERIFIED",
       "implementationEvidence": [
         "benchmarks/model.py",
         "benchmarks/report.py",
         "tests/test_benchmark_contract.py",
         "docs/benchmark.md"
       ],
-      "runtimeEvidence": [],
-      "runtimeScope": "",
-      "limitation": "",
-      "publicWording": "A fixed 45-run context benchmark protocol and report engine are implemented; no measured lean or context-efficiency result is claimed."
+      "runtimeEvidence": [
+        "docs/research/evidence/codex-v1-ws6-benchmark.md"
+      ],
+      "runtimeScope": "Codex CLI 0.153.0; frozen five-task campaign",
+      "limitation": "The campaign contains three repetitions per cell and mode C retained 11 failures. No general efficiency, context-reduction, latency, quality-superiority, statistical-significance, or benchmark-leadership claim is supported.",
+      "publicWording": "The frozen Codex CLI 0.153.0 campaign retained 45 authenticated runs: A 15/15 PASS, B 15/15 PASS, C 4/15 PASS, and 34 PASS / 11 retained FAIL overall, with no retry or replacement and no superiority claim."
     },
     {
       "id": "three-os-ci",

@@ -26,7 +26,7 @@ Task PASS/FAIL outcomes remain task outcomes. The report generator does not prod
 
 `benchmarks/fixtures/results/complete-synthetic.json` and `incomplete-synthetic.json` exist only to test completeness and aggregation logic. Synthetic data and the report generator alone do not earn a `lean` claim. They must never be cited as measured benchmark evidence.
 
-Actual authenticated collection is a later operator campaign outside deterministic CI. Until a real complete 45-run campaign is collected under the fixed model/reasoning/runtime controls, the project does not promote a measured `lean` or context-efficiency result.
+The completed frozen campaign contains 45 authenticated runs: A 15/15 PASS, B 15/15 PASS, C 4/15 PASS, and 34 PASS / 11 retained FAIL overall. There was no retry or replacement of a failed counted attempt. These measurements are descriptive for the frozen task/runtime set only; they do not support a general efficiency, context-reduction, latency, quality-superiority, statistical-significance, or benchmark-leadership claim. The CLI 0.153.0 unauthorized connector startup warning remains a documented limitation, not evidence of connector isolation. The sanitized measurements and exact closure boundary are recorded in `docs/research/evidence/codex-v1-ws6-benchmark.md`.
 
 ## Authenticated v1 methodology
 
