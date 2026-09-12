@@ -28,6 +28,12 @@ Source-of-truth release documents:
 - [`docs/install.md`](docs/install.md) — managed lifecycle and ownership contract;
 - [`SECURITY.md`](SECURITY.md) — trust, secret, hook, and local-state boundaries.
 
+OpenAI/Codex reviewer entrypoints:
+
+- [`docs/presentation/openai-project-brief.md`](docs/presentation/openai-project-brief.md) — concise evidence-bound product narrative;
+- [`docs/presentation/evidence-index.md`](docs/presentation/evidence-index.md) — material claims mapped to tests, runtime records, and limitations;
+- [`docs/demo/representative-workflow.md`](docs/demo/representative-workflow.md) — short reproducible RED/GREEN workflow and retained reviewer evidence path.
+
 ## Architecture and roadmap
 
 - [`docs/architecture.md`](docs/architecture.md) — current implemented architecture vs approved v1 target;

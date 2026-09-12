@@ -56,6 +56,15 @@ The native plugin path and PowerShell-owned skill installer are separate deliver
 
 ## Current engineering flow
 
+The accepted representative path is:
+
+```text
+task -> orchestrator -> classify -> plan -> RED -> implementation -> GREEN -> real reviewer subagent -> verify -> hooks/state/evidence -> sanitized machine-checkable record -> release claim/evidence contract
+```
+
+The reviewer gate requires an actual distinct subagent lifecycle. Parent
+self-review and reviewer-like prose are not equivalent evidence.
+
 ```mermaid
 flowchart TD
     U[Engineering task] --> O[orchestrator]
