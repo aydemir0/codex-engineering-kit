@@ -52,6 +52,7 @@ if os.environ.get("CEK_EXPECT_ISOLATION") == "1":
     if (
         os.environ.get("USERPROFILE") != expected_profile
         or not noninteractive
+        or "--dangerously-bypass-hook-trust" not in args
         or "skip_host_skill_discovery" not in args
         or "orchestrator.skills.enabled=false" not in args
         or "skills.include_instructions=false" not in args
@@ -278,7 +279,7 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
                 "nativeSkillInstructions": "disabled",
                 "parentCodexEnvironment": "scrubbed",
                 "cekHooks": "plugin-native",
-                "hookTrust": "persisted",
+                "hookTrust": "acceptance-only-vetted-bypass",
                 "pluginSkills": "excluded",
                 "projectTrust": "exact-disposable-workspace",
                 "rules": "ignored",
