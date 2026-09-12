@@ -56,6 +56,7 @@ if os.environ.get("CEK_EXPECT_ISOLATION") == "1":
         or "orchestrator.skills.enabled=false" not in args
         or "skills.include_instructions=false" not in args
         or "--ignore-user-config" in args
+        or not any(item.startswith('projects."') and item.endswith('.trust_level="trusted"') for item in args)
         or "--ephemeral" in args
         or any(name.startswith("CODEX_") and name != "CODEX_HOME" for name in os.environ)
     ):
@@ -279,6 +280,7 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
                 "cekHooks": "plugin-native",
                 "hookTrust": "persisted",
                 "pluginSkills": "excluded",
+                "projectTrust": "exact-disposable-workspace",
                 "rules": "ignored",
                 "sandbox": "read-only",
                 "sessionStorage": "disposable CODEX_HOME",

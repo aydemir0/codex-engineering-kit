@@ -45,6 +45,7 @@ EXECUTION_ISOLATION = {
     "cekHooks": "plugin-native",
     "hookTrust": "persisted",
     "pluginSkills": "excluded",
+    "projectTrust": "exact-disposable-workspace",
     "rules": "ignored",
     "sandbox": "read-only",
     "sessionStorage": "disposable CODEX_HOME",
@@ -475,6 +476,7 @@ def _run_attempt(
         schema_path.write_text(json.dumps(RESPONSE_SCHEMA, sort_keys=True), encoding="utf-8")
         prompt = build_attempt_prompt(case, configuration, skill_root)
         feature = ("--enable", "multi_agent") if configuration.id == "C" else ("--disable", "multi_agent")
+        project_trust = f'projects.{json.dumps(str(work.resolve()).casefold())}.trust_level="trusted"'
         command = (
             *codex_command,
             "--approve-for-me",
@@ -485,6 +487,8 @@ def _run_attempt(
             "orchestrator.skills.enabled=false",
             "-c",
             "skills.include_instructions=false",
+            "-c",
+            project_trust,
             "--enable",
             "skip_host_skill_discovery",
             "--color",
