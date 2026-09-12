@@ -140,9 +140,9 @@ def build_attempt_prompt(
         )
     elif configuration.id == "C":
         sections.append(
-            "You must spawn the project-local explorer subagent for repository inspection, wait "
-            "for it, and base the final JSON on its returned evidence. Do not perform the fixture "
-            "inspection in the parent context."
+            "You must call the collaboration spawn_agent tool with agent_type exactly \"explorer\" "
+            "for repository inspection, wait for that child, and base the final JSON on its "
+            "returned evidence. Do not perform the fixture inspection in the parent context."
         )
     return "\n\n".join(sections)
 
