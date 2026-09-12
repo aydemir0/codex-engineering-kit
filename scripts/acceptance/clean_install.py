@@ -110,6 +110,7 @@ def execute_acceptance(repo: Path, codex: str = "codex") -> dict[str, Any]:
         _set_prior_fixture(staged)
         update_project, update_sentinel = _project(root, "update-project")
         update_home = root / "update-home"
+        update_home.mkdir()
         install(staged, update_project, update_home, run)
         (staged / ".codex-plugin" / "plugin.json").write_bytes(current_manifest)
         (staged / ".codex" / "agents" / "reviewer.toml").write_bytes(current_reviewer)
