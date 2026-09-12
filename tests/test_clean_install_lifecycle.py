@@ -4,9 +4,10 @@ import json
 import shutil
 import tempfile
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
-from scripts.cek_lifecycle import LifecycleError, install, uninstall, update, verify, verify_clean
+from scripts.cek_lifecycle import LifecycleError, install, main, uninstall, update, verify, verify_clean
 
 
 class FakeCodex:
@@ -15,6 +16,8 @@ class FakeCodex:
         self.marketplace_root = marketplace_root
         self.plugin_installed = False
         self.plugin_version = "0.2.0-alpha.1"
+        self.plugin_marketplace_name = "codex-engineering-kit-dev"
+        self.marketplace_remove_leaves_entry = False
         self.calls: list[list[str]] = []
 
     def __call__(self, args: list[str], env: dict[str, str]) -> dict[str, object]:
@@ -36,7 +39,8 @@ class FakeCodex:
                 "stderr": "",
             }
         if args == ["plugin", "marketplace", "remove", "codex-engineering-kit-dev", "--json"]:
-            self.marketplace_root = None
+            if not self.marketplace_remove_leaves_entry:
+                self.marketplace_root = None
             return {"returncode": 0, "stdout": "{}", "stderr": ""}
         if args == ["plugin", "list", "--json"]:
             installed = []
@@ -44,7 +48,7 @@ class FakeCodex:
                 installed.append(
                     {
                         "name": "codex-engineering-kit",
-                        "marketplaceName": "codex-engineering-kit-dev",
+                        "marketplaceName": self.plugin_marketplace_name,
                         "version": self.plugin_version,
                         "installed": True,
                         "enabled": True,
@@ -191,6 +195,29 @@ class CleanInstallLifecycleTests(unittest.TestCase):
         with self.assertRaisesRegex(LifecycleError, "packaged plugin asset"):
             verify(self.repo, self.project, self.home, codex)
 
+    def test_documented_cli_dispatches_install(self) -> None:
+        codex = FakeCodex()
+        with patch(
+            "scripts.cek_lifecycle.run_codex",
+            side_effect=lambda _executable, args, env: codex(args, env),
+        ):
+            exit_code = main(
+                [
+                    "install",
+                    "--repo",
+                    str(self.repo),
+                    "--project",
+                    str(self.project),
+                    "--codex-home",
+                    str(self.home),
+                    "--codex",
+                    "fake-codex",
+                ]
+            )
+
+        self.assertEqual(exit_code, 0)
+        self.assertTrue((self.project / ".codex" / "agents" / "reviewer.toml").is_file())
+
     def test_update_refuses_modified_owned_reviewer(self) -> None:
         codex = FakeCodex()
         install(self.repo, self.project, self.home, codex)
@@ -203,6 +230,17 @@ class CleanInstallLifecycleTests(unittest.TestCase):
 
         self.assertEqual(codex.calls, before + [["--version"]])
         self.assertEqual(target.read_text(encoding="utf-8"), "user change")
+
+    def test_update_refuses_same_name_plugin_from_another_marketplace(self) -> None:
+        codex = FakeCodex()
+        install(self.repo, self.project, self.home, codex)
+        codex.plugin_marketplace_name = "other-marketplace"
+        before = list(codex.calls)
+
+        with self.assertRaisesRegex(LifecycleError, "different marketplace"):
+            update(self.repo, self.project, self.home, codex)
+
+        self.assertEqual(codex.calls, before + [["--version"], ["plugin", "marketplace", "list", "--json"], ["plugin", "list", "--json"]])
 
     def test_uninstall_preserves_modified_reviewer_and_unrelated_files(self) -> None:
         codex = FakeCodex()
@@ -230,6 +268,29 @@ class CleanInstallLifecycleTests(unittest.TestCase):
             ["plugin", "marketplace", "remove", "codex-engineering-kit-dev", "--json"],
             codex.calls,
         )
+
+    def test_uninstall_refuses_marketplace_rebinding_before_mutation(self) -> None:
+        codex = FakeCodex()
+        install(self.repo, self.project, self.home, codex)
+        codex.marketplace_root = str((self.root / "different-repo").resolve())
+        before = list(codex.calls)
+
+        with self.assertRaisesRegex(LifecycleError, "different local root"):
+            uninstall(self.repo, self.project, self.home, codex)
+
+        self.assertEqual(codex.calls, before + [["--version"], ["plugin", "marketplace", "list", "--json"]])
+        self.assertTrue((self.home / "codex-engineering-kit.install.json").is_file())
+
+    def test_verify_clean_refuses_a_surviving_cek_marketplace(self) -> None:
+        codex = FakeCodex()
+        install(self.repo, self.project, self.home, codex)
+        codex.marketplace_remove_leaves_entry = True
+
+        with self.assertRaisesRegex(LifecycleError, "marketplace removal was not confirmed"):
+            uninstall(self.repo, self.project, self.home, codex)
+
+        with self.assertRaisesRegex(LifecycleError, "managed lifecycle state remains"):
+            verify_clean(self.repo, self.project, self.home, codex)
 
     def test_install_refuses_marketplace_name_bound_to_another_checkout(self) -> None:
         codex = FakeCodex(marketplace_root=str((self.root / "different-repo").resolve()))

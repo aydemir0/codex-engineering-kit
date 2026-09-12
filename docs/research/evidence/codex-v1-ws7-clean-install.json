@@ -1,0 +1,35 @@
+{
+  "baselineSha": "29bee4282ea21785d618dc477e984a3f44afc8d7",
+  "candidateSha": "4f4c7e130916b1370d86fd9fb3a4785d2c907c69",
+  "sourceHead": "0da70a7618592e26aeeba422d899f60dfe8a50e7",
+  "checks": {
+    "cleanInstallVerified": true,
+    "priorToCurrentUpdateVerified": true,
+    "reinstallVerified": true,
+    "reviewerConflictFailedClosed": true,
+    "reviewerProvisioned": true,
+    "sentinelsPreserved": true,
+    "uninstallVerifiedClean": true,
+    "updateSentinelPreserved": true
+  },
+  "cleanup": {
+    "disposableRootsRemaining": 0,
+    "temporaryOutputRemoved": true
+  },
+  "independentReview": "PASS",
+  "kind": "cek-ws7-clean-install-acceptance",
+  "priorInstallFixtureVersion": "0.2.0-alpha.0",
+  "regressions": {
+    "focused": 59,
+    "fullPython": 246,
+    "powerShellSuites": "PASS",
+    "content": "PASS",
+    "releaseContracts": "13 claims / 13 surfaces PASS",
+    "compile": "PASS",
+    "diffCheck": "PASS"
+  },
+  "result": "PASS",
+  "runtime": "Codex CLI 0.153.0",
+  "sanitized": true,
+  "schemaVersion": 1
+}

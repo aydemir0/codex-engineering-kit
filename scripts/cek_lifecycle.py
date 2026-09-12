@@ -440,6 +440,8 @@ def update(repo: Path, project: Path, codex_home: Path, run: Runner) -> dict[str
     current = _installed_plugin(run, env, name)
     if current is None:
         raise LifecycleError("managed CEK plugin is missing; uninstall cleanly before reinstalling")
+    if current.get("marketplaceName") != marketplace:
+        raise LifecycleError("managed plugin is registered to a different marketplace")
     payload = _checked(
         run,
         ["plugin", "add", f"{name}@{marketplace}", "--json"],
@@ -490,11 +492,18 @@ def uninstall(repo: Path, project: Path, codex_home: Path, run: Runner) -> dict[
     if not global_path.exists() or not project_path.exists():
         raise LifecycleError("incomplete managed lifecycle state; refusing destructive cleanup")
     global_state, project_state = _managed(repo, project, codex_home)
+    marketplaces = _marketplaces(run, env)
+    if marketplaces.get(marketplace) != repo:
+        raise LifecycleError("managed marketplace is missing or points to a different local root")
     plugin = _installed_plugin(run, env, name)
+    if plugin is not None and plugin.get("marketplaceName") != marketplace:
+        raise LifecycleError("managed plugin is registered to a different marketplace")
     if plugin is not None:
         _checked(run, ["plugin", "remove", f"{name}@{marketplace}", "--json"], env, "plugin remove")
-    if global_state["marketplaceOwned"] and marketplace in _marketplaces(run, env):
+    if global_state["marketplaceOwned"] and marketplace in marketplaces:
         _checked(run, ["plugin", "marketplace", "remove", marketplace, "--json"], env, "marketplace remove")
+        if marketplace in _marketplaces(run, env):
+            raise LifecycleError("marketplace removal was not confirmed; refusing to remove lifecycle state")
 
     preserved: list[str] = []
     target = project / PROJECT_ASSET
@@ -512,11 +521,15 @@ def verify_clean(repo: Path, project: Path, codex_home: Path, run: Runner) -> di
     repo, project, codex_home = _preflight(repo, project, codex_home)
     env = _environment(codex_home)
     _runtime(run, env)
-    name, _version, _marketplace = _identity(repo)
+    name, _version, marketplace = _identity(repo)
     if (codex_home / GLOBAL_STATE_NAME).exists() or (project / PROJECT_STATE).exists():
         raise LifecycleError("managed lifecycle state remains")
     if _installed_plugin(run, env, name) is not None:
         raise LifecycleError("CEK plugin remains installed")
+    if marketplace in _marketplaces(run, env):
+        raise LifecycleError(
+            "CEK marketplace remains registered; inspect whether it is user-owned before considering cleanup complete"
+        )
     return {
         "status": "clean",
         "unownedReviewerPresent": (project / PROJECT_ASSET).exists(),

@@ -263,6 +263,29 @@
       }
     },
     {
+      "surface": "managed-install-lifecycle",
+      "cli0147": {
+        "status": "NOT_RUN",
+        "evidence": [],
+        "limitation": "The v1 managed lifecycle intentionally requires Codex CLI 0.153.0."
+      },
+      "cli0153": {
+        "status": "PASS",
+        "evidence": [
+          "docs/research/evidence/codex-v1-ws7-clean-install.md",
+          "docs/research/evidence/codex-v1-ws7-clean-install.json"
+        ],
+        "limitation": "Project-local reviewer provisioning is separate from plugin-native custom-agent registration; interactive skill discovery is not claimed."
+      },
+      "desktop0152": {
+        "status": "BLOCKED",
+        "evidence": [
+          "docs/research/evidence/codex-desktop-0.152.0-plan-f-compatibility.md"
+        ],
+        "limitation": "Codex Desktop 0.152.0 remains unavailable; CLI lifecycle evidence is not promoted to Desktop behavior."
+      }
+    },
+    {
       "surface": "desktop-parent-wait",
       "cli0147": {
         "status": "NOT_RUN",

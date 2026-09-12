@@ -14,6 +14,7 @@ CLAIM_DOC = ROOT / "docs" / "release" / "claim-evidence-matrix.md"
 CLI_0153_EVIDENCE = (
     "docs/research/evidence/codex-cli-0.153.0-v1-runtime-closure.md"
 )
+WS7_EVIDENCE = "docs/research/evidence/codex-v1-ws7-clean-install.md"
 
 
 class V1RuntimeCompatibilityContractTests(unittest.TestCase):
@@ -55,6 +56,7 @@ class V1RuntimeCompatibilityContractTests(unittest.TestCase):
             "compaction-state": "PASS",
             "session-end": "PASS",
             "interactive-plugin-discovery": "NOT_RUN",
+            "managed-install-lifecycle": "PASS",
             "desktop-parent-wait": "NOT_RUN",
         }
 
@@ -78,10 +80,11 @@ class V1RuntimeCompatibilityContractTests(unittest.TestCase):
             )
 
             if expected_status == "PASS":
+                required_evidence = WS7_EVIDENCE if surface == "managed-install-lifecycle" else CLI_0153_EVIDENCE
                 self.assertIn(
-                    CLI_0153_EVIDENCE,
+                    required_evidence,
                     result.evidence,
-                    f"{surface}/cli0153 lacks fresh v1 evidence",
+                    f"{surface}/cli0153 lacks fresh evidence",
                 )
 
     def test_cli_0153_pass_evidence_is_committed_and_repository_relative(self) -> None:

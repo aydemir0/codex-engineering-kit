@@ -48,6 +48,20 @@ class CleanInstallDocumentationTests(unittest.TestCase):
         self.assertIn("docs/research/evidence/codex-v1-ws6-benchmark.md", benchmark["runtimeEvidence"])
         self.assertIn("34 PASS / 11 retained FAIL", benchmark["publicWording"])
 
+    def test_ws7_evidence_is_sanitized_and_reconciled(self) -> None:
+        evidence = [
+            (ROOT / "docs" / "research" / "evidence" / "codex-v1-ws7-clean-install.json").read_text(encoding="utf-8"),
+            (ROOT / "docs" / "research" / "evidence" / "codex-v1-ws7-clean-install.md").read_text(encoding="utf-8"),
+        ]
+        for text in evidence:
+            self.assertNotRegex(text, r"(?i)(auth\.json|bearer\s+[A-Za-z0-9._-]+|session[_ -]?id|thread[_ -]?id)")
+            self.assertNotRegex(text, r"(?:[A-Za-z]:[\\/]|/Users/|/home/|C:\\\\Users\\\\)")
+        payload = json.loads(evidence[0])
+        self.assertTrue(payload["sanitized"])
+        self.assertEqual(payload["result"], "PASS")
+        self.assertEqual(payload["sourceHead"], "0da70a7618592e26aeeba422d899f60dfe8a50e7")
+        self.assertEqual(payload["candidateSha"], "4f4c7e130916b1370d86fd9fb3a4785d2c907c69")
+
 
 if __name__ == "__main__":
     unittest.main()

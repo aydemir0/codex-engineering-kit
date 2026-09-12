@@ -169,6 +169,24 @@
       "publicWording": "The frozen Codex CLI 0.153.0 campaign retained 45 authenticated runs: A 15/15 PASS, B 15/15 PASS, C 4/15 PASS, and 34 PASS / 11 retained FAIL overall, with no retry or replacement and no superiority claim."
     },
     {
+      "id": "managed-install-lifecycle",
+      "wording": "Ownership-aware native plugin and project-local reviewer lifecycle",
+      "state": "VERIFIED",
+      "implementationEvidence": [
+        "scripts/cek_lifecycle.py",
+        "scripts/acceptance/clean_install.py",
+        "tests/test_clean_install_lifecycle.py",
+        "docs/install.md"
+      ],
+      "runtimeEvidence": [
+        "docs/research/evidence/codex-v1-ws7-clean-install.md",
+        "docs/research/evidence/codex-v1-ws7-clean-install.json"
+      ],
+      "runtimeScope": "Codex CLI 0.153.0",
+      "limitation": "The managed path requires exactly CLI 0.153.0. It provisions the reviewer as a project-local role and does not claim plugin-native custom-agent registration, interactive skill discovery, or Codex Desktop behavior.",
+      "publicWording": "CEK clean install, verification, ownership-aware update, uninstall, reviewer provisioning, conflict preservation, and reinstall are verified on Codex CLI 0.153.0 in a disposable environment."
+    },
+    {
       "id": "three-os-ci",
       "wording": "Deterministic Ubuntu, Windows, and macOS CI contracts",
       "state": "IMPLEMENTED",

@@ -24,6 +24,8 @@ Use `--codex-home <path>` only when intentionally managing a non-default Codex p
 
 Install records whether it added the CEK marketplace. Uninstall removes that marketplace only when the record says CEK added it; a same-root marketplace that predated the managed install survives. Incomplete or malformed ownership state stops destructive cleanup and requires manual inspection.
 
+Uninstall rechecks the marketplace root immediately before any plugin/marketplace removal and confirms that an owned marketplace actually disappeared before deleting lifecycle state. `verify-clean` also fails closed when the CEK marketplace name remains registered; this makes a surviving user-owned marketplace explicit instead of silently calling the profile clean.
+
 ## Support boundary
 
 The native plugin packages eight plugin-native skills and default `hooks/hooks.json`; lifecycle verification proves the installed cache matches those shipped files. It does not promote Codex CLI 0.153.0 interactive skill discovery beyond its existing `NOT_RUN` classification.
