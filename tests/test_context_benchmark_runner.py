@@ -64,6 +64,11 @@ if os.environ.get("CEK_EXPECT_ISOLATION") == "1":
     ):
         print("benchmark isolation missing", file=sys.stderr)
         raise SystemExit(8)
+if os.environ.get("CEK_EXPECT_GIT_REPO") == "1":
+    work = Path(args[args.index("-C") + 1])
+    if not (work / ".git").is_dir():
+        print("disposable fixture is not a Git repository", file=sys.stderr)
+        raise SystemExit(9)
 case_id = re.search(r"Benchmark case: ([a-z-]+)", prompt).group(1)
 configuration_id = re.search(r"Benchmark configuration: ([ABC])", prompt).group(1)
 failing = os.environ.get("CEK_FAKE_FAIL_TUPLE")
@@ -152,6 +157,14 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
         self.assertEqual(len(keys), 45)
         self.assertEqual(len(set(keys)), 45)
         self.assertEqual(keys, sorted(keys))
+
+    def test_attempt_initializes_disposable_fixture_as_git_repository(self) -> None:
+        record = self.run_campaign(
+            smoke=True,
+            environment={**os.environ, "CEK_EXPECT_GIT_REPO": "1"},
+        )
+
+        self.assertEqual(record["runs"][0]["status"], "PASS")
 
     def test_methodology_hash_normalizes_platform_line_endings(self) -> None:
         hashes = []
@@ -280,6 +293,7 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
                 "nativeSkillInstructions": "disabled",
                 "parentCodexEnvironment": "scrubbed",
                 "cekHooks": "plugin-native",
+                "fixtureRepository": "fresh git init",
                 "hookTrust": "persisted",
                 "pluginSkills": "excluded",
                 "projectTrust": "exact-disposable-workspace",

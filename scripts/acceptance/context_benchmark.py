@@ -43,6 +43,7 @@ EXECUTION_ISOLATION = {
     "nativeSkillInstructions": "disabled",
     "parentCodexEnvironment": "scrubbed",
     "cekHooks": "plugin-native",
+    "fixtureRepository": "fresh git init",
     "hookTrust": "persisted",
     "pluginSkills": "excluded",
     "projectTrust": "exact-disposable-workspace",
@@ -470,6 +471,7 @@ def _run_attempt(
     with tempfile.TemporaryDirectory(prefix="cek-context-benchmark-") as temporary:
         work = Path(temporary)
         shutil.copytree(fixture_root / case.fixture, work, dirs_exist_ok=True)
+        _git_output(work, "init", "--quiet")
         if configuration.id == "C":
             agent_dir = work / ".codex" / "agents"
             agent_dir.mkdir(parents=True)
@@ -658,7 +660,7 @@ def run_context_benchmark(
         "timeoutSeconds": timeout_seconds,
         "repetitions": 3,
         "retryPolicy": RETRY_POLICY,
-        "executionIsolation": {
+    "executionIsolation": {
             **EXECUTION_ISOLATION,
             "userProfileEnvironment": "disposable" if isolated_user_profile is not None else "inherited",
         },
