@@ -52,7 +52,7 @@ if os.environ.get("CEK_EXPECT_ISOLATION") == "1":
     exec_index = args.index("exec")
     plugins_index = next(index for index in range(len(args) - 1) if args[index : index + 2] == ["--enable", "plugins"])
     remote_index = next(index for index in range(len(args) - 1) if args[index : index + 2] == ["--disable", "remote_plugin"])
-    v2_index = next(index for index in range(len(args) - 1) if args[index : index + 2] == ["--enable", "multi_agent_v2"])
+    v2_index = next(index for index in range(len(args) - 1) if args[index : index + 2] == ["--disable", "multi_agent_v2"])
     if (
         os.environ.get("USERPROFILE") != expected_profile
         or not noninteractive
@@ -62,7 +62,7 @@ if os.environ.get("CEK_EXPECT_ISOLATION") == "1":
         or not any(args[index : index + 2] == ["--enable", "plugins"] for index in range(len(args) - 1))
         or any(args[index : index + 2] == ["--disable", "plugins"] for index in range(len(args) - 1))
         or not any(args[index : index + 2] == ["--disable", "remote_plugin"] for index in range(len(args) - 1))
-        or not any(args[index : index + 2] == ["--enable", "multi_agent_v2"] for index in range(len(args) - 1))
+        or not any(args[index : index + 2] == ["--disable", "multi_agent_v2"] for index in range(len(args) - 1))
         or max(plugins_index, remote_index, v2_index) > exec_index
         or "--ignore-user-config" in args
         or "--skip-git-repo-check" in args
