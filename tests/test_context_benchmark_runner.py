@@ -49,6 +49,10 @@ if "debug" in args and "prompt-input" in args:
 prompt = sys.stdin.read() if args[-1] == "-" else args[-1]
 if os.environ.get("CEK_EXPECT_ISOLATION") == "1":
     expected_profile = os.environ["CEK_EXPECT_PROFILE"]
+    exec_index = args.index("exec")
+    plugins_index = next(index for index in range(len(args) - 1) if args[index : index + 2] == ["--enable", "plugins"])
+    remote_index = next(index for index in range(len(args) - 1) if args[index : index + 2] == ["--disable", "remote_plugin"])
+    v2_index = next(index for index in range(len(args) - 1) if args[index : index + 2] == ["--enable", "multi_agent_v2"])
     if (
         os.environ.get("USERPROFILE") != expected_profile
         or not noninteractive
@@ -59,6 +63,7 @@ if os.environ.get("CEK_EXPECT_ISOLATION") == "1":
         or any(args[index : index + 2] == ["--disable", "plugins"] for index in range(len(args) - 1))
         or not any(args[index : index + 2] == ["--disable", "remote_plugin"] for index in range(len(args) - 1))
         or not any(args[index : index + 2] == ["--enable", "multi_agent_v2"] for index in range(len(args) - 1))
+        or max(plugins_index, remote_index, v2_index) > exec_index
         or "--ignore-user-config" in args
         or "--skip-git-repo-check" in args
         or not any(item.startswith('projects."') and item.endswith('.trust_level="trusted"') for item in args)
@@ -69,7 +74,13 @@ if os.environ.get("CEK_EXPECT_ISOLATION") == "1":
         raise SystemExit(8)
 if os.environ.get("CEK_EXPECT_GIT_REPO") == "1":
     work = Path(args[args.index("-C") + 1])
-    if not (work / ".git").is_dir() or not (work / ".codex" / "config.toml").is_file():
+    project_config = work / ".codex" / "config.toml"
+    config_text = project_config.read_text(encoding="utf-8") if project_config.is_file() else ""
+    if (
+        not (work / ".git").is_dir()
+        or '[agents.explorer]' not in config_text
+        or 'config_file = "agents/explorer.toml"' not in config_text
+    ):
         print("disposable fixture project layer is incomplete", file=sys.stderr)
         raise SystemExit(9)
 case_id = re.search(r"Benchmark case: ([a-z-]+)", prompt).group(1)

@@ -480,7 +480,12 @@ def _run_attempt(
         if configuration.id == "C":
             agent_dir = work / ".codex" / "agents"
             agent_dir.mkdir(parents=True)
-            (agent_dir.parent / "config.toml").write_text("", encoding="utf-8")
+            (agent_dir.parent / "config.toml").write_text(
+                '[agents.explorer]\n'
+                'description = "Read-only CEK benchmark fixture explorer."\n'
+                'config_file = "agents/explorer.toml"\n',
+                encoding="utf-8",
+            )
             shutil.copyfile(explorer_agent, agent_dir / "explorer.toml")
         schema_path = work / "response-schema.json"
         schema_path.write_text(json.dumps(RESPONSE_SCHEMA, sort_keys=True), encoding="utf-8")
@@ -494,6 +499,11 @@ def _run_attempt(
         command = (
             *codex_command,
             "--approve-for-me",
+            "--enable",
+            "plugins",
+            "--disable",
+            "remote_plugin",
+            *feature,
             "exec",
             "--json",
             "--ignore-rules",
@@ -501,10 +511,6 @@ def _run_attempt(
             "orchestrator.skills.enabled=false",
             "-c",
             "skills.include_instructions=false",
-            "--enable",
-            "plugins",
-            "--disable",
-            "remote_plugin",
             "-c",
             project_trust,
             "--enable",
@@ -519,7 +525,6 @@ def _run_attempt(
             f'model_reasoning_effort="{reasoning}"',
             "--disable",
             "apps",
-            *feature,
             "--output-schema",
             str(schema_path),
             "-C",
