@@ -13,6 +13,7 @@ runtime, deterministic checks, and remaining limitations.
 | WS5 | Skill, agent, and parent-context role stocktake | `docs/research/evidence/codex-v1-ws5-skill-agent-stocktake.md`; `release_contracts/assets.json` | `tests/test_asset_stocktake.py`; `tests/test_agent_contract.py` |
 | WS6 | Frozen authenticated benchmark | `docs/research/evidence/codex-v1-ws6-benchmark.md`; `benchmarks/results/ws6-cli01530-v3.json` | `tests/test_benchmark_contract.py` |
 | WS7 | Clean install, update, uninstall, ownership, and reviewer provisioning | `docs/research/evidence/codex-v1-ws7-clean-install.md`; `docs/research/evidence/codex-v1-ws7-clean-install.json` | `tests/test_clean_install_lifecycle.py`; `tests/test_clean_install_docs.py` |
+| WS8 | Evidence-bound OpenAI/Codex presentation and reproducible demo | `docs/research/evidence/codex-v1-ws8-presentation.md`; `docs/presentation/openai-project-brief.md`; `docs/demo/representative-workflow.md` | `tests/test_presentation_contract.py` |
 
 ## Presentation claim map
 

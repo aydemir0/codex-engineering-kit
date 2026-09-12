@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 BRIEF = ROOT / "docs" / "presentation" / "openai-project-brief.md"
 INDEX = ROOT / "docs" / "presentation" / "evidence-index.md"
 DEMO = ROOT / "docs" / "demo" / "representative-workflow.md"
+EVIDENCE = ROOT / "docs" / "research" / "evidence" / "codex-v1-ws8-presentation.md"
 
 
 class PresentationContractTests(unittest.TestCase):
@@ -59,7 +60,7 @@ class PresentationContractTests(unittest.TestCase):
 
     def test_evidence_index_maps_closed_workstreams_to_committed_evidence(self) -> None:
         text = INDEX.read_text(encoding="utf-8")
-        for workstream in ("WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7"):
+        for workstream in ("WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7", "WS8"):
             self.assertIn(workstream, text)
         for path in (
             "docs/release/claim-evidence-matrix.md",
@@ -69,6 +70,7 @@ class PresentationContractTests(unittest.TestCase):
             "docs/research/evidence/codex-v1-ws5-skill-agent-stocktake.md",
             "docs/research/evidence/codex-v1-ws6-benchmark.md",
             "docs/research/evidence/codex-v1-ws7-clean-install.md",
+            "docs/research/evidence/codex-v1-ws8-presentation.md",
         ):
             self.assertIn(path, text)
 
@@ -100,6 +102,18 @@ class PresentationContractTests(unittest.TestCase):
             "docs/demo/representative-workflow.md",
         ):
             self.assertIn(path, text)
+
+    def test_ws8_evidence_is_sanitized_and_bound_to_the_reviewed_candidate(self) -> None:
+        text = EVIDENCE.read_text(encoding="utf-8")
+        self.assertIn("bb54d45126b243e92f5a8c2913f2947b6d9f3929", text)
+        self.assertIn("252 tests", text)
+        self.assertIn("Independent final review: PASS", text)
+        self.assertIn("No remote mutation", text)
+        self.assertNotRegex(
+            text,
+            r"(?i)(auth\.json|bearer\s+[A-Za-z0-9._-]+|session[_ -]?id|thread[_ -]?id)",
+        )
+        self.assertNotRegex(text, r"(?:[A-Za-z]:[\\/]|/Users/|/home/)")
 
 
 if __name__ == "__main__":
