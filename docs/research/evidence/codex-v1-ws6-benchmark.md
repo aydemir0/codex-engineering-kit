@@ -25,7 +25,7 @@ The modes are A always-loaded, B progressive disclosure, and C project-local iso
 - Timeout: 180 seconds per attempt
 - Retry policy: one attempt per tuple; no selective retry
 - Execution: deterministic sequential case/configuration/repeat order
-- Isolation: read-only sandbox, automatic approval review, apps disabled, CEK plugin-native lifecycle hooks enabled, plugin skill instructions excluded, user config/rules ignored, host skill instructions excluded from model-visible input, disposable profile and `CODEX_HOME`
+- Isolation: read-only sandbox, automatic approval review, apps disabled, CEK plugin-native lifecycle hooks enabled with persisted handler trust, plugin skill instructions excluded, repository rules ignored, benchmark-only disposable config/profile/`CODEX_HOME`, and host skill instructions excluded from model-visible input
 
 The authenticated capsule materialized only the five frozen fixture trees, five case files, three configuration files, eight required CEK `SKILL.md` files, the shipped project-local explorer definition, and the minimum benchmark runner modules. The capsule contained 32 files and was clean at the candidate commit.
 

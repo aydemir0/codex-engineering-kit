@@ -55,6 +55,7 @@ if os.environ.get("CEK_EXPECT_ISOLATION") == "1":
         or "skip_host_skill_discovery" not in args
         or "orchestrator.skills.enabled=false" not in args
         or "skills.include_instructions=false" not in args
+        or "--ignore-user-config" in args
         or "--ephemeral" in args
         or any(name.startswith("CODEX_") and name != "CODEX_HOME" for name in os.environ)
     ):
@@ -276,11 +277,12 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
                 "nativeSkillInstructions": "disabled",
                 "parentCodexEnvironment": "scrubbed",
                 "cekHooks": "plugin-native",
+                "hookTrust": "persisted",
                 "pluginSkills": "excluded",
                 "rules": "ignored",
                 "sandbox": "read-only",
                 "sessionStorage": "disposable CODEX_HOME",
-                "userConfig": "ignored",
+                "userConfig": "disposable-only",
                 "userProfileEnvironment": "disposable",
             },
         )

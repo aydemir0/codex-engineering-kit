@@ -43,11 +43,12 @@ EXECUTION_ISOLATION = {
     "nativeSkillInstructions": "disabled",
     "parentCodexEnvironment": "scrubbed",
     "cekHooks": "plugin-native",
+    "hookTrust": "persisted",
     "pluginSkills": "excluded",
     "rules": "ignored",
     "sandbox": "read-only",
     "sessionStorage": "disposable CODEX_HOME",
-    "userConfig": "ignored",
+    "userConfig": "disposable-only",
 }
 TOOL_ITEM_TYPES = {
     "command_execution",
@@ -479,7 +480,6 @@ def _run_attempt(
             "--approve-for-me",
             "exec",
             "--json",
-            "--ignore-user-config",
             "--ignore-rules",
             "-c",
             "orchestrator.skills.enabled=false",
