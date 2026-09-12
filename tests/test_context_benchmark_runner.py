@@ -57,6 +57,7 @@ if os.environ.get("CEK_EXPECT_ISOLATION") == "1":
         or "skills.include_instructions=false" not in args
         or not any(args[index : index + 2] == ["--enable", "plugins"] for index in range(len(args) - 1))
         or any(args[index : index + 2] == ["--disable", "plugins"] for index in range(len(args) - 1))
+        or not any(args[index : index + 2] == ["--disable", "remote_plugin"] for index in range(len(args) - 1))
         or not any(args[index : index + 2] == ["--enable", "multi_agent_v2"] for index in range(len(args) - 1))
         or "--ignore-user-config" in args
         or "--skip-git-repo-check" in args
@@ -68,8 +69,8 @@ if os.environ.get("CEK_EXPECT_ISOLATION") == "1":
         raise SystemExit(8)
 if os.environ.get("CEK_EXPECT_GIT_REPO") == "1":
     work = Path(args[args.index("-C") + 1])
-    if not (work / ".git").is_dir():
-        print("disposable fixture is not a Git repository", file=sys.stderr)
+    if not (work / ".git").is_dir() or not (work / ".codex" / "config.toml").is_file():
+        print("disposable fixture project layer is incomplete", file=sys.stderr)
         raise SystemExit(9)
 case_id = re.search(r"Benchmark case: ([a-z-]+)", prompt).group(1)
 configuration_id = re.search(r"Benchmark configuration: ([ABC])", prompt).group(1)
@@ -301,6 +302,7 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
                 "fixtureRepository": "fresh git init",
                 "hookTrust": "persisted",
                 "pluginSkills": "excluded",
+                "remotePlugins": "disabled",
                 "projectTrust": "exact-disposable-workspace",
                 "rules": "ignored",
                 "sandbox": "read-only",

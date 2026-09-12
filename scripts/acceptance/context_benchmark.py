@@ -46,6 +46,7 @@ EXECUTION_ISOLATION = {
     "fixtureRepository": "fresh git init",
     "hookTrust": "persisted",
     "pluginSkills": "excluded",
+    "remotePlugins": "disabled",
     "projectTrust": "exact-disposable-workspace",
     "rules": "ignored",
     "sandbox": "read-only",
@@ -479,6 +480,7 @@ def _run_attempt(
         if configuration.id == "C":
             agent_dir = work / ".codex" / "agents"
             agent_dir.mkdir(parents=True)
+            (agent_dir.parent / "config.toml").write_text("", encoding="utf-8")
             shutil.copyfile(explorer_agent, agent_dir / "explorer.toml")
         schema_path = work / "response-schema.json"
         schema_path.write_text(json.dumps(RESPONSE_SCHEMA, sort_keys=True), encoding="utf-8")
@@ -501,6 +503,8 @@ def _run_attempt(
             "skills.include_instructions=false",
             "--enable",
             "plugins",
+            "--disable",
+            "remote_plugin",
             "-c",
             project_trust,
             "--enable",
