@@ -483,7 +483,11 @@ def _run_attempt(
         schema_path = work / "response-schema.json"
         schema_path.write_text(json.dumps(RESPONSE_SCHEMA, sort_keys=True), encoding="utf-8")
         prompt = build_attempt_prompt(case, configuration, skill_root)
-        feature = ("--enable", "multi_agent") if configuration.id == "C" else ("--disable", "multi_agent")
+        feature = (
+            ("--enable", "multi_agent", "--enable", "multi_agent_v2")
+            if configuration.id == "C"
+            else ("--disable", "multi_agent", "--disable", "multi_agent_v2")
+        )
         project_trust = f'projects.{json.dumps(str(work.resolve()).casefold())}.trust_level="trusted"'
         command = (
             *codex_command,
