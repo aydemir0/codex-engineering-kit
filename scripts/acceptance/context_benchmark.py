@@ -43,7 +43,7 @@ EXECUTION_ISOLATION = {
     "nativeSkillInstructions": "disabled",
     "parentCodexEnvironment": "scrubbed",
     "cekHooks": "plugin-native",
-    "hookTrust": "acceptance-only-vetted-bypass",
+    "hookTrust": "persisted",
     "pluginSkills": "excluded",
     "projectTrust": "exact-disposable-workspace",
     "rules": "ignored",
@@ -480,7 +480,6 @@ def _run_attempt(
         command = (
             *codex_command,
             "--approve-for-me",
-            "--dangerously-bypass-hook-trust",
             "exec",
             "--json",
             "--ignore-rules",
