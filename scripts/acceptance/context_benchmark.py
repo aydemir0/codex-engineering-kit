@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import re
+import signal
 import shutil
 import subprocess
 import sys
@@ -189,36 +190,54 @@ def _run(
 ) -> tuple[int | None, str, str, int, str | None]:
     started = time.monotonic_ns()
     try:
-        completed = subprocess.run(
+        process = subprocess.Popen(
             list(command),
             cwd=str(cwd),
             env=environment,
-            input=input_text,
             text=True,
             encoding="utf-8",
             errors="replace",
-            capture_output=True,
-            timeout=timeout_seconds,
-            check=False,
+            stdin=subprocess.PIPE if input_text is not None else None,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0,
+            start_new_session=os.name != "nt",
             shell=False,
         )
+        stdout, stderr = process.communicate(input=input_text, timeout=timeout_seconds)
         return (
-            completed.returncode,
-            completed.stdout or "",
-            completed.stderr or "",
+            process.returncode,
+            stdout or "",
+            stderr or "",
             max(0, (time.monotonic_ns() - started) // 1_000_000),
             None,
         )
     except subprocess.TimeoutExpired as exc:
-        def text(value: str | bytes | None) -> str:
+        if os.name == "nt":
+            try:
+                process.send_signal(signal.CTRL_BREAK_EVENT)
+            except OSError:
+                process.kill()
+        else:
+            os.killpg(process.pid, signal.SIGKILL)
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+        for stream in (process.stdout, process.stderr):
+            if stream is not None:
+                stream.close()
+
+        def timeout_text(value: str | bytes | None) -> str:
             if value is None:
                 return ""
             return value.decode("utf-8", errors="replace") if isinstance(value, bytes) else value
 
         return (
             None,
-            text(exc.stdout),
-            text(exc.stderr),
+            timeout_text(exc.stdout),
+            timeout_text(exc.stderr),
             max(0, (time.monotonic_ns() - started) // 1_000_000),
             "timeout",
         )

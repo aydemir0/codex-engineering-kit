@@ -5,6 +5,7 @@ import os
 import sys
 import subprocess
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from benchmarks.report import build_report, load_run_records
 from scripts.acceptance.context_benchmark import (
     RETRY_POLICY,
     _methodology_sha256,
+    _run,
     build_attempt_prompt,
     planned_attempts,
     run_context_benchmark,
@@ -173,6 +175,26 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
                 )
             )
         self.assertEqual(hashes[0], hashes[1])
+
+    def test_timeout_terminates_spawned_process_tree(self) -> None:
+        parent = self.root / "hanging_parent.py"
+        parent.write_text(
+            "import subprocess, sys, time\n"
+            "subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'])\n"
+            "time.sleep(60)\n",
+            encoding="utf-8",
+        )
+        started = time.monotonic()
+        exit_code, _, _, _, error = _run(
+            (sys.executable, str(parent)),
+            cwd=self.root,
+            timeout_seconds=0.2,
+            environment=os.environ.copy(),
+        )
+
+        self.assertIsNone(exit_code)
+        self.assertEqual(error, "timeout")
+        self.assertLess(time.monotonic() - started, 5)
 
     def test_script_entrypoint_loads_from_repository_root(self) -> None:
         completed = subprocess.run(
