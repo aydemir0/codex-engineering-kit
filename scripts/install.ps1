@@ -8,7 +8,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-$ToolkitVersion = '0.1.0'
+$ToolkitVersion = '1.0.0'
 $SkillNames = @(
     'orchestrator',
     'continuous-learning',

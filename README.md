@@ -2,7 +2,7 @@
 
 > Evidence-bound engineering workflows for OpenAI Codex: native plugin packaging, focused skills and subagents, lifecycle guardrails, verification, evals, state/compaction, and release contracts.
 
-**Status:** v0.2 alpha · evidence-bound release-candidate work · independent community project
+**Status:** v1.0.0 release candidate · evidence-bound · independent community project
 
 Codex Engineering Kit (CEK) is an independent engineering toolkit for Codex. It turns planning, architecture, debugging, review, testing, security, performance work, and release readiness into explicit, inspectable contracts.
 
@@ -10,7 +10,7 @@ CEK is **not an official OpenAI or Anthropic project**. No endorsement is implie
 
 ## Release evidence first
 
-v0.2 separates four kinds of statements:
+v1.0.0 separates four kinds of statements:
 
 | State | Meaning |
 | --- | --- |
@@ -21,9 +21,9 @@ v0.2 separates four kinds of statements:
 
 Source-of-truth release documents:
 
-- [`docs/release/compatibility-matrix.md`](docs/release/compatibility-matrix.md) — per-surface Codex CLI 0.147.0 / Desktop 0.152.0 status;
-- [`docs/release/claim-evidence-matrix.md`](docs/release/claim-evidence-matrix.md) — allowed public wording and evidence for each v0.2 claim;
-- [`docs/release/v0.2-rc-checklist.md`](docs/release/v0.2-rc-checklist.md) — release-candidate gates and blockers;
+- [`docs/release/compatibility-matrix.md`](docs/release/compatibility-matrix.md) — per-surface CLI and separately tracked Desktop status;
+- [`docs/release/claim-evidence-matrix.md`](docs/release/claim-evidence-matrix.md) — allowed public wording and evidence for each v1 claim;
+- [`docs/release/v1.0-readiness.md`](docs/release/v1.0-readiness.md) — current release-gate decision and provenance;
 - [`docs/benchmark.md`](docs/benchmark.md) — fixed benchmark protocol and reporting boundary;
 - [`docs/install.md`](docs/install.md) — managed lifecycle and ownership contract;
 - [`SECURITY.md`](SECURITY.md) — trust, secret, hook, and local-state boundaries.
@@ -37,9 +37,9 @@ OpenAI/Codex reviewer entrypoints:
 ## Architecture and roadmap
 
 - [`docs/architecture.md`](docs/architecture.md) — current implemented architecture vs approved v1 target;
-- [`ROADMAP.md`](ROADMAP.md) — evidence-gated v0.2/v1 workstreams.
+- [`ROADMAP.md`](ROADMAP.md) — evidence-gated v1 workstreams and deferred boundaries.
 
-## What v0.2 contains
+## What v1.0.0 contains
 
 | Capability | Evidence-bound status |
 | --- | --- |
@@ -49,7 +49,7 @@ OpenAI/Codex reviewer entrypoints:
 | Explicit manifest `hooks` override | Runtime-verified only on CLI 0.153.0; historical CLI 0.147.0 and Desktop 0.152.0 remain blocked. |
 | 8 project-local native agent definitions | `reviewer` and `explorer` have CLI 0.153.0 lifecycle evidence; the other definitions have deterministic contracts only. |
 | 9 parent-context role contracts | Implemented as orchestration references; they are not autonomous agents. |
-| Bounded state + compaction continuation | Runtime-verified on CLI 0.147.0; Desktop 0.152.0 remains separately tracked. |
+| Bounded state + compaction continuation | Runtime-verified on CLI 0.147.0 and 0.153.0; Desktop 0.152.0 remains separately tracked. |
 | Verification engine + deterministic eval tooling | Implemented and exercised by repository CI/contracts. |
 | Manual Git-worktree conflict-stop/cleanup acceptance | Implemented; this is not a claim about Codex-managed Desktop worktrees. |
 | Backend/frontend domain pattern skills | Implemented as optional, narrow evidence packs. |
@@ -98,7 +98,7 @@ codex-engineering-kit/
 
 - Git;
 - OpenAI Codex for runtime/plugin use;
-- **Python 3.11+ for v0.2 hook/runtime-dependent features and repository validation**;
+- **Python 3.11+ for v1.0.0 hook/runtime-dependent features and repository validation**;
 - PowerShell 7+ only for the PowerShell installer/update/uninstall and related Windows-oriented helper flows.
 
 The repository's deterministic CI covers Ubuntu, Windows, and macOS contracts. That CI coverage must not be read as proof that every Codex runtime feature behaves identically on every OS.
@@ -151,9 +151,9 @@ The PowerShell installer owns six core skills; the optional domain packs are plu
 
 ## Native hooks and trust boundary
 
-v0.2 ships `hooks/hooks.json` and bounded hook handlers for lifecycle evidence, state/compaction, and narrow PreToolUse deny/allow guardrails.
+v1.0.0 ships `hooks/hooks.json` and bounded hook handlers for lifecycle evidence, state/compaction, and narrow PreToolUse deny/allow guardrails.
 
-The primary plugin manifest intentionally **does not** add an explicit `hooks` field while RISK-001 remains unresolved. Plan F tests an explicit override only in a disposable copy. See the [compatibility matrix](docs/release/compatibility-matrix.md).
+The primary plugin manifest intentionally uses default `hooks/hooks.json` discovery. An explicit manifest override was verified only in a disposable CLI 0.153.0 acceptance copy; historical CLI 0.147.0 and Desktop 0.152.0 support are not claimed. See the [compatibility matrix](docs/release/compatibility-matrix.md).
 
 Hooks are guardrails, not a sandbox or a substitute for Codex trust/review controls. Python availability is required for the shipped Python hook dispatcher. See [SECURITY.md](SECURITY.md).
 
@@ -185,7 +185,7 @@ The repository defines a fixed 45-run A/B/C protocol:
 - B — progressive disclosure;
 - C — isolated subagent.
 
-The frozen campaign contains 45 authenticated runs with A 15/15 PASS, B 15/15 PASS, C 4/15 PASS, and 34 PASS / 11 retained FAIL overall. There was no retry or replacement of failed counted attempts. These descriptive measurements do not establish statistical significance, general efficiency, context reduction, latency advantage, quality superiority, or benchmark leadership. The unauthorized connector startup warning observed on CLI 0.153.0 remains documented; no connector isolation claim is inferred. See [`docs/research/evidence/codex-v1-ws6-benchmark.md`](docs/research/evidence/codex-v1-ws6-benchmark.md).
+The frozen campaign contains 45 authenticated runs with A 15/15 PASS, B 15/15 PASS, C 4/15 PASS, and 34 PASS / 11 retained FAIL overall: 9 missing-lifecycle failures and 2 quality-contract failures. There was no retry or replacement of failed counted attempts. These descriptive measurements do not establish statistical significance, general efficiency, context reduction, latency advantage, quality superiority, or benchmark leadership. The unauthorized connector startup warning observed on CLI 0.153.0 remains documented; no connector isolation claim is inferred. See [`docs/research/evidence/codex-v1-ws6-benchmark.md`](docs/research/evidence/codex-v1-ws6-benchmark.md).
 
 ## Continuous learning
 
@@ -218,7 +218,7 @@ Tracked runtime baselines are:
 
 CLI 0.153.0 has the current v1 bounded evidence. CLI 0.147.0 retains historical limitations, including SessionEnd classification and explicit-hook coverage. The Desktop 0.152.0 acceptance campaign remains blocked in the current execution harness and no CLI result is inferred as Desktop behavior.
 
-Therefore v0.2 does not claim a fully verified compatibility window. Use the [compatibility matrix](docs/release/compatibility-matrix.md) for the exact surface-by-surface state.
+Therefore v1.0.0 does not claim a fully verified compatibility window. Use the [compatibility matrix](docs/release/compatibility-matrix.md) for the exact surface-by-surface state.
 
 ## Development
 

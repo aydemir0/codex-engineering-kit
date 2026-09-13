@@ -66,7 +66,7 @@ class PluginSmokeHelperTests(unittest.TestCase):
                 "pluginId": "codex-engineering-kit@dev",
                 "name": "codex-engineering-kit",
                 "marketplaceName": "dev",
-                "version": "0.2.0-alpha.1",
+                "version": "1.0.0",
                 "installedPath": "C:/Users/someone/.codex/plugins/x",
                 "authPolicy": "ON_USE",
             },

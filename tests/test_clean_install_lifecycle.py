@@ -15,7 +15,7 @@ class FakeCodex:
         self.version = version
         self.marketplace_root = marketplace_root
         self.plugin_installed = False
-        self.plugin_version = "0.2.0-alpha.1"
+        self.plugin_version = "1.0.0"
         self.plugin_marketplace_name = "codex-engineering-kit-dev"
         self.marketplace_remove_leaves_entry = False
         self.calls: list[list[str]] = []
@@ -103,7 +103,7 @@ class CleanInstallLifecycleTests(unittest.TestCase):
         (self.repo / "hooks").mkdir()
         (self.repo / "skills" / "example").mkdir(parents=True)
         self.project.mkdir()
-        self._write_source("0.2.0-alpha.1", "reviewer-v1")
+        self._write_source("1.0.0", "reviewer-v1")
 
     def tearDown(self) -> None:
         self.temp.cleanup()
@@ -150,11 +150,11 @@ class CleanInstallLifecycleTests(unittest.TestCase):
         )
         self.assertEqual(verify(self.repo, self.project, self.home, codex)["status"], "verified")
 
-        self._write_source("0.2.0-alpha.2", "reviewer-v2")
-        codex.plugin_version = "0.2.0-alpha.2"
+        self._write_source("1.0.1", "reviewer-v2")
+        codex.plugin_version = "1.0.1"
         updated = update(self.repo, self.project, self.home, codex)
-        self.assertEqual(updated["fromVersion"], "0.2.0-alpha.1")
-        self.assertEqual(updated["toVersion"], "0.2.0-alpha.2")
+        self.assertEqual(updated["fromVersion"], "1.0.0")
+        self.assertEqual(updated["toVersion"], "1.0.1")
         self.assertEqual(verify(self.repo, self.project, self.home, codex)["status"], "verified")
 
         removed = uninstall(self.repo, self.project, self.home, codex)
@@ -188,7 +188,7 @@ class CleanInstallLifecycleTests(unittest.TestCase):
             / "cache"
             / "codex-engineering-kit-dev"
             / "codex-engineering-kit"
-            / "0.2.0-alpha.1"
+            / "1.0.0"
         )
         (installed_path / "hooks" / "hooks.json").write_text("tampered", encoding="utf-8")
 

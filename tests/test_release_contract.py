@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import re
 import unittest
 
@@ -69,6 +70,40 @@ class ReleaseModelTests(unittest.TestCase):
 
 
 class ReleaseDocumentationTests(unittest.TestCase):
+    def test_current_v1_release_identity_is_consistent(self) -> None:
+        manifest = json.loads(
+            (ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8")
+        )
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
+        roadmap = (ROOT / "ROADMAP.md").read_text(encoding="utf-8")
+        historical = (ROOT / "docs" / "release" / "v0.2-rc-checklist.md").read_text(
+            encoding="utf-8"
+        )
+        readiness = (ROOT / "docs" / "release" / "v1.0-readiness.md").read_text(
+            encoding="utf-8"
+        )
+        acceptance = (ROOT / "scripts" / "acceptance" / "clean_install.py").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertEqual(manifest["version"], "1.0.0")
+        self.assertIn("**Status:** v1.0.0", readme)
+        self.assertIn("docs/release/v1.0-readiness.md", readme)
+        self.assertNotIn("**Status:** v0.2 alpha", readme)
+        self.assertIn("v1.0 security contract", security)
+        self.assertIn("docs/release/v1.0-readiness.md", security)
+        self.assertIn("45 authenticated runs", roadmap)
+        self.assertIn("34 PASS / 11 retained FAIL", roadmap)
+        for text in (readme, roadmap):
+            self.assertIn("9 missing-lifecycle failures", text)
+            self.assertIn("2 quality-contract failures", text)
+        self.assertNotIn("real authenticated 45-run benchmark campaign has not been completed", roadmap)
+        self.assertIn("Historical", historical)
+        self.assertIn("not the current v1 release decision", historical)
+        self.assertNotIn("remain v0.2 alpha", readiness)
+        self.assertIn('update_result["toVersion"] == "1.0.0"', acceptance)
+
     def test_release_documents_name_both_baselines(self) -> None:
         compatibility = (ROOT / "docs" / "release" / "compatibility-matrix.md").read_text(encoding="utf-8")
         claims = (ROOT / "docs" / "release" / "claim-evidence-matrix.md").read_text(encoding="utf-8")
@@ -112,7 +147,7 @@ class ReleaseDocumentationTests(unittest.TestCase):
         text = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("docs/release/compatibility-matrix.md", text)
         self.assertIn("docs/release/claim-evidence-matrix.md", text)
-        self.assertIn("docs/release/v0.2-rc-checklist.md", text)
+        self.assertIn("docs/release/v1.0-readiness.md", text)
 
     def test_roadmap_v02_names_actual_slices(self) -> None:
         text = (ROOT / "ROADMAP.md").read_text(encoding="utf-8").casefold()
@@ -144,6 +179,20 @@ class ReleaseDocumentationTests(unittest.TestCase):
 
 
 class PlanFStaticContractTests(unittest.TestCase):
+    def test_ci_runs_the_complete_v1_gate_on_the_candidate_branch(self) -> None:
+        text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        self.assertIn("feat/v1-core-workflow", text)
+        marker = "  v1-release-gate:"
+        self.assertIn(marker, text)
+        section = text[text.index(marker):]
+        for required in (
+            'python -B -m unittest discover -s tests -p "test_*.py"',
+            "python tests/validate_content.py",
+            "python -m benchmarks.cli validate --cases benchmarks/cases --configurations benchmarks/configurations",
+            "python -m release_contracts.cli validate --claims release_contracts/claims.json --compatibility release_contracts/compatibility.json",
+        ):
+            self.assertIn(required, section)
+
     def test_ci_contains_offline_plan_f_matrix(self) -> None:
         text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
         marker = "  plan-f-contracts:"

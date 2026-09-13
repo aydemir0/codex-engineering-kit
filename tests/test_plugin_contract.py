@@ -17,7 +17,7 @@ class PluginContractTests(unittest.TestCase):
     def test_manifest_identity_and_version(self) -> None:
         data = self.load_json(PLUGIN)
         self.assertEqual(data["name"], "codex-engineering-kit")
-        self.assertRegex(data["version"], r"^0\.2\.0-alpha\.1$")
+        self.assertEqual(data["version"], "1.0.0")
         self.assertTrue(data["description"].strip())
         self.assertEqual(data["license"], "MIT")
         self.assertEqual(data["skills"], "./skills/")

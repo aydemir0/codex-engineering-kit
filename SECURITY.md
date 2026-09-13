@@ -4,7 +4,7 @@ Codex Engineering Kit modifies local Codex/plugin or skill state, can execute bo
 
 ## Supported versions
 
-Security fixes target the latest release and the current `main` branch. Pre-release feature branches, including v0.2 alpha work, may change rapidly and must not be treated as stable security contracts without the corresponding release evidence.
+Security fixes target the latest release and the current `main` branch. The v1.0.0 release candidate must not be treated as a stable security contract without its corresponding exact-candidate release evidence.
 
 ## Reporting a vulnerability
 
@@ -20,7 +20,7 @@ The repository-specific assets, trust boundaries, mitigations, and residual risk
 
 ### Hooks are guardrails, not a sandbox
 
-v0.2 native hooks can provide bounded lifecycle evidence, state/compaction handling, and narrow PreToolUse deny/allow decisions. They are not an operating-system sandbox, a complete policy engine, or a guarantee that arbitrary unsafe behavior cannot occur.
+v1.0.0 native hooks can provide bounded lifecycle evidence, state/compaction handling, and narrow PreToolUse deny/allow decisions. They are not an operating-system sandbox, a complete policy engine, or a guarantee that arbitrary unsafe behavior cannot occur.
 
 Hook configuration and executable code that is not managed by CEK remains a user trust/review boundary. A one-off trust bypass used for an isolated acceptance experiment would prove only that the tested loading/execution path worked under that bypass; it would **not** prove the normal trust UX.
 
@@ -28,7 +28,7 @@ The primary plugin manifest omits an explicit `hooks` override. The scoped Codex
 
 ### Python runtime requirement
 
-The shipped v0.2 hook dispatcher and runtime-dependent local-state features require Python 3.11+ to be available. Missing Python must be treated as a feature/runtime limitation rather than silently reported as successful hook execution.
+The shipped v1.0.0 hook dispatcher and runtime-dependent local-state features require Python 3.11+ to be available. Missing Python must be treated as a feature/runtime limitation rather than silently reported as successful hook execution.
 
 ### Toolkit-owned vs user-owned files
 
@@ -76,11 +76,11 @@ MCP templates contain only secret-free requirements and login metadata. Provider
 
 ## Release evidence boundary
 
-The v0.2 release contract does not claim blanket security, feature parity, measured context efficiency, or blanket cross-platform Codex runtime compatibility. Exact claim and compatibility scopes are recorded in:
+The v1.0 security contract does not claim blanket security, feature parity, measured context efficiency, or blanket cross-platform Codex runtime compatibility. Exact claim and compatibility scopes are recorded in:
 
 - `docs/release/claim-evidence-matrix.md`;
 - `docs/release/compatibility-matrix.md`;
-- `docs/release/v0.2-rc-checklist.md`.
+- `docs/release/v1.0-readiness.md`.
 
 ## Out of scope by design
 

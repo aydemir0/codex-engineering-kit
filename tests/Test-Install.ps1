@@ -62,6 +62,8 @@ try {
     $ManifestPath = Join-Path $InstallHome 'codex-engineering-kit.manifest.json'
     Assert-True (Test-Path -LiteralPath $ManifestPath) 'manifest must be written'
     $ManifestBefore = Get-Content -LiteralPath $ManifestPath -Raw
+    $ManifestData = $ManifestBefore | ConvertFrom-Json
+    Assert-True ($ManifestData.toolkit_version -eq '1.0.0') 'installer manifest must use the v1 release identity'
 
     & $Install -CodexHome $InstallHome | Out-Null
     $ManifestAfter = Get-Content -LiteralPath $ManifestPath -Raw
