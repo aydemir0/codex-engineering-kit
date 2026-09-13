@@ -184,14 +184,18 @@ class PlanFStaticContractTests(unittest.TestCase):
         self.assertIn("feat/v1-core-workflow", text)
         marker = "  v1-release-gate:"
         self.assertIn(marker, text)
-        section = text[text.index(marker):]
+        section = text[text.index(marker):text.index("  content-contracts:")]
         for required in (
+            "fetch-depth: 0",
             'python -B -m unittest discover -s tests -p "test_*.py"',
             "python tests/validate_content.py",
             "python -m benchmarks.cli validate --cases benchmarks/cases --configurations benchmarks/configurations",
             "python -m release_contracts.cli validate --claims release_contracts/claims.json --compatibility release_contracts/compatibility.json",
         ):
             self.assertIn(required, section)
+
+        plan_e = text[text.index("  plan-e-contracts:"):text.index("  plan-f-contracts:")]
+        self.assertIn("fetch-depth: 0", plan_e)
 
     def test_ci_contains_offline_plan_f_matrix(self) -> None:
         text = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
