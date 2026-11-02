@@ -21,3 +21,6 @@ class VerificationReport:
     package_manager: str | None
     steps: tuple[VerificationStep, ...]
     status: str
+
+    candidate_digest: str | None = None
+    candidate_manifest: tuple[tuple[str, int, str, int], ...] = ()

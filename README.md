@@ -34,6 +34,8 @@ OpenAI/Codex reviewer entrypoints:
 - [`docs/presentation/evidence-index.md`](docs/presentation/evidence-index.md) — material claims mapped to tests, runtime records, and limitations;
 - [`docs/demo/representative-workflow.md`](docs/demo/representative-workflow.md) — short reproducible RED/GREEN workflow and retained reviewer evidence path.
 
+- [`docs/verification/product-integrity.md`](docs/verification/product-integrity.md) — candidate-bound verification, local recovery and native diagnostics with a credentials-free demo.
+
 ## Architecture and roadmap
 
 - [`docs/architecture.md`](docs/architecture.md) — current implemented architecture vs approved v1 target;

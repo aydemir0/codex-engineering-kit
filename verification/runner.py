@@ -4,6 +4,7 @@ from pathlib import Path
 
 from runtime.state import write_state
 from verification.git_checks import run_git_diff_check
+from verification.candidate import capture_manifest, manifest_digest, assert_report_current, CandidateIntegrityError
 from verification.model import VerificationReport, VerificationStep
 from verification.node import discover_node_steps
 from verification.python_project import discover_python_steps
@@ -48,6 +49,8 @@ def _step_payload(step: VerificationStep) -> dict:
 
 
 def report_record(report: VerificationReport) -> dict:
+    if report.status == "passed":
+        assert_report_current(Path(report.project_path), report)
     return {
         "schemaVersion": report.schema_version,
         "kind": REPORT_KIND,
@@ -56,6 +59,8 @@ def report_record(report: VerificationReport) -> dict:
         "packageManager": report.package_manager,
         "steps": [_step_payload(step) for step in report.steps],
         "status": report.status,
+        "candidateDigest": report.candidate_digest,
+        "candidateManifest": list(report.candidate_manifest),
     }
 
 
@@ -87,6 +92,7 @@ def verify_project(
     if not project_path.is_dir():
         raise FileNotFoundError(f"Project path not found: {project_path}")
 
+    before = capture_manifest(project_path)
     package_manager: str | None = None
     if (project_path / "package.json").is_file():
         project_type = "node"
@@ -108,8 +114,17 @@ def verify_project(
         scan_secret_patterns(project_path),
         run_git_diff_check(project_path),
     )
+    try:
+        stable = capture_manifest(project_path) == before
+    except (CandidateIntegrityError, OSError):
+        stable = False
+    steps += (VerificationStep("candidate-integrity", None, "passed" if stable else "failed",
+                               0 if stable else 1, 0,
+                               "Candidate unchanged" if stable else "Candidate changed during verification; rerun tests"),)
     report = VerificationReport(
         schema_version=SCHEMA_VERSION,
+        candidate_digest=manifest_digest(before),
+        candidate_manifest=before,
         project_type=project_type,
         project_path=str(project_path),
         package_manager=package_manager,
