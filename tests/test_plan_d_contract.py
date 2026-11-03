@@ -97,8 +97,20 @@ class PlanDContractTests(unittest.TestCase):
                 for node in ast.walk(tree):
                     if isinstance(node, ast.Import):
                         roots = [alias.name.split(".", 1)[0] for alias in node.names]
-                    elif isinstance(node, ast.ImportFrom) and node.module:
-                        roots = [node.module.split(".", 1)[0]]
+                    elif isinstance(node, ast.ImportFrom):
+                        if node.level:
+                            package_parts = path.relative_to(REPO_ROOT).parent.parts
+                            if node.level > len(package_parts):
+                                violations.append(f"{path.relative_to(REPO_ROOT)}: relative import beyond top-level package")
+                                continue
+                            # ImportFrom.module omits the leading dots. Resolve
+                            # relative imports within their owning package, not
+                            # as similarly named external dependencies.
+                            roots = [package_parts[0]]
+                        elif node.module:
+                            roots = [node.module.split(".", 1)[0]]
+                        else:
+                            continue
                     else:
                         continue
                     for root in roots:

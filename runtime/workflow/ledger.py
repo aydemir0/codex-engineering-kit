@@ -16,7 +16,18 @@ KIND = "cek-m2b-workflow-ledger"
 SCHEMA_VERSION = 1
 ZERO_HASH = "0" * 64
 SECRET = re.compile(r"(?i)(authorization\s*:\s*bearer\s+|api[_-]?key\s*[=:]\s*|token\s*[=:]\s*)([^\s,;]+)")
-WINDOWS_PATH = re.compile(r"(?i)\b[A-Z]:\\[^\s\"']+")
+PATH_PREFIX = r"(?:[A-Za-z]:[\\/]|\\\\|file://|/)"
+ABSOLUTE_PATH = re.compile("^" + PATH_PREFIX, re.IGNORECASE)
+# Keep public web URLs and relative artifact/branch names intact. Quoted paths
+# may contain spaces; bare paths end at diagnostic punctuation or whitespace.
+TEXT_PATH = re.compile(
+    r"(?P<url>https?://[^\s<>\"']+)"
+    rf'|(?P<quoted>"{PATH_PREFIX}[^"\r\n]*"|\'{PATH_PREFIX}[^\'\r\n]*\')'
+    rf"|(?<![\w./:\\])(?P<bare>{PATH_PREFIX}[^\s<>\"'(),;{{}}\[\]]+)",
+    re.IGNORECASE,
+)
+PATH_FIELDS = {"cwd", "root", "directory", "directories", "filename", "filenames",
+               "file", "files", "workspace", "project", "worktree"}
 
 
 class LedgerError(ValueError):
@@ -32,26 +43,42 @@ def _event_hash(event: dict[str, Any]) -> str:
     return hashlib.sha256(_canonical(subject)).hexdigest()
 
 
-def _sanitize_text(value: str) -> str:
+def _sanitize_text(value: str, *, path_value: bool = False) -> str:
+    if path_value and ABSOLUTE_PATH.match(value.lstrip()):
+        return "<private-path>"
     value = SECRET.sub(lambda match: match.group(1) + "<redacted>", value)
-    return WINDOWS_PATH.sub("<private-path>", value)
+
+    def redact(match: re.Match[str]) -> str:
+        if match.group("url"):
+            return match.group(0)
+        if quoted := match.group("quoted"):
+            return quoted[0] + "<private-path>" + quoted[-1]
+        path = match.group("bare")
+        return "<private-path>" + path[len(path.rstrip(".:!?")):]
+
+    return TEXT_PATH.sub(redact, value)
 
 
-def _sanitize(value: Any) -> Any:
+def _sanitize(value: Any, *, path_value: bool = False) -> Any:
     if isinstance(value, str):
-        return _sanitize_text(value)
+        return _sanitize_text(value, path_value=path_value)
     if isinstance(value, list):
-        return [_sanitize(item) for item in value]
+        return [_sanitize(item, path_value=path_value) for item in value]
     if isinstance(value, dict):
         sanitized: dict[str, Any] = {}
         for key, item in value.items():
             folded = key.casefold()
+            # File-keyed evidence must not leak paths or lose colliding entries.
+            public_key = ("<private-path>:sha256:" + hashlib.sha256(key.encode("utf-8")).hexdigest()
+                          if ABSOLUTE_PATH.match(key) else key)
             if folded.endswith("identity") or folded in {"agentid", "agent_id"}:
-                sanitized[key] = f"sha256:{hashlib.sha256(str(item).encode('utf-8')).hexdigest()[:20]}" if item else None
+                sanitized[public_key] = f"sha256:{hashlib.sha256(str(item).encode('utf-8')).hexdigest()[:20]}" if item else None
             elif folded in {"sessionid", "session_id", "rawoutput", "transcript", "prompt", "auth"}:
-                sanitized[key] = "<redacted>"
+                sanitized[public_key] = "<redacted>"
             else:
-                sanitized[key] = _sanitize(item)
+                sanitized[public_key] = _sanitize(
+                    item, path_value=folded in PATH_FIELDS or folded.endswith(
+                        ("path", "paths", "root", "roots", "directory", "directories", "filename", "filenames")))
         return sanitized
     return value
 
