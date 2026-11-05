@@ -9,7 +9,8 @@ import tempfile
 from pathlib import Path
 from typing import Any, Sequence
 
-from scripts.cek_lifecycle import install, run_codex, uninstall, update, verify, verify_clean
+from scripts.cek_lifecycle import SUPPORTED_RUNTIME, install, run_codex, uninstall, update, verify, verify_clean
+from runtime.assurance.native_host import require_complete_package, require_native_host
 
 
 SCHEMA_VERSION = 1
@@ -26,6 +27,9 @@ def _git(repo: Path, *args: str) -> str:
 
 
 def _runner(codex: str):
+    executable = Path(shutil.which(codex) or codex)
+    require_complete_package(executable)
+    require_native_host(executable)
     return lambda command, env: run_codex(codex, command, env)
 
 
@@ -134,7 +138,7 @@ def execute_acceptance(repo: Path, codex: str = "codex") -> dict[str, Any]:
         "kind": "cek-ws7-clean-install-acceptance",
         "result": "PASS",
         "candidateSha": candidate,
-        "runtime": "Codex CLI 0.153.0",
+        "runtime": SUPPORTED_RUNTIME,
         "priorInstallFixtureVersion": PRIOR_FIXTURE_VERSION,
         "checks": checks,
         "sanitized": True,
