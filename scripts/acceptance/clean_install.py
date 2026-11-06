@@ -121,7 +121,7 @@ def execute_acceptance(repo: Path, codex: str = "codex") -> dict[str, Any]:
         update_result = update(staged, update_project, update_home, run)
         checks["priorToCurrentUpdateVerified"] = (
             update_result["fromVersion"] == PRIOR_FIXTURE_VERSION
-            and update_result["toVersion"] == "1.0.0"
+            and update_result["toVersion"] == json.loads(current_manifest)["version"]
             and verify(staged, update_project, update_home, run)["status"] == "verified"
         )
         uninstall(staged, update_project, update_home, run)

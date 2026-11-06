@@ -4,7 +4,9 @@ Current managed native onboarding uses the separately declared Windows x64
 Codex CLI **0.155.1** configuration in [runtime compatibility](../verification/runtime-compatibility.md)
 and `currentProductRuntime` in `release_contracts/compatibility.json`.
 The historical runtime columns below retain their original evidence scopes;
-they do not establish model-driven support on the current runtime.
+they do not establish model-driven support on the current runtime. A separate
+[one-task record](../research/evidence/cek-real-workflow-20261106.json) supplies
+new bounded evidence; it does not promote any historical row.
 
 This matrix is the human-readable projection of `release_contracts/compatibility.json`. `PASS` is scoped to the named runtime and cited evidence only. Evidence is never promoted across runtimes.
 

@@ -256,6 +256,9 @@ def _preflight(repo: Path, project: Path, codex_home: Path) -> tuple[Path, Path,
     codex_home = codex_home.resolve(strict=False)
     if not repo.is_dir() or not project.is_dir():
         raise LifecycleError("repository and project paths must be existing directories")
+    # Local plugin installation snapshots its source; overlapping state can copy itself.
+    if repo == codex_home or repo in codex_home.parents or codex_home in repo.parents:
+        raise LifecycleError("CEK_SOURCE_PROFILE_OVERLAP: use separate source and CODEX_HOME directories; preserve existing state")
     _reject_link_chain(project, PROJECT_ASSET)
     _reject_link_chain(project, PROJECT_STATE)
     if codex_home.exists():

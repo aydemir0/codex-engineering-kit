@@ -1,0 +1,158 @@
+{
+  "kind": "cek-bounded-real-workflow-evidence",
+  "sanitized": true,
+  "evidenceClass": "SANITIZED_DERIVED_SUMMARY_NOT_PUBLIC_RAW_TRANSCRIPT",
+  "sourceCommit": "e5dc24941f9f3b858f1534d8404598579c5d8564",
+  "testedPluginVersion": "1.0.0",
+  "betaArtifactModelExecution": "NOT_RUN",
+  "date": "2026-11-06",
+  "runtime": {
+    "cliVersion": "0.155.1",
+    "platform": "windows-x64",
+    "cliSHA256": "eba0f32c976667cb9298efafd98513e823eeda7b576a03ec658bb8be8d336316",
+    "model": "gpt-6-astra",
+    "codeMode": true
+  },
+  "attempts": 1,
+  "result": "PASS",
+  "task": "tests/fixtures/representative-workflow/task.md",
+  "execution": {
+    "skillsRead": [
+      "orchestrator",
+      "verification-loop"
+    ],
+    "rolesRead": [
+      "tdd-guide",
+      "code-reviewer"
+    ],
+    "red": {
+      "event": "item_6",
+      "exitCode": 1,
+      "tests": 2,
+      "failure": "ValueError not raised"
+    },
+    "patch": {
+      "event": "item_8",
+      "file": "src/calculator.py",
+      "old": "return float(\"inf\")",
+      "new": "raise ValueError(\"division by zero\")"
+    },
+    "green": {
+      "event": "item_9",
+      "exitCode": 0,
+      "testsPassed": 2
+    },
+    "nativeReviewer": "Separate read-only reviewer executed; no material findings; relied on parent test evidence",
+    "independentVerification": "Separate process reran both tests and exact behavior checks after model completion",
+    "durationSeconds": 203.809,
+    "cost": "NOT_MEASURED"
+  },
+  "integrity": {
+    "candidateDigest": "8a22d76eaafe0d239fdac479f596e1c477d8c84c3c711db1e85a1ae1e563cdc9",
+    "workingDiffSHA256": "d73ac45ff2f6548c34a25d163dfb31af5f9b9f5468b551d682cf649a3661baff",
+    "protectedFilesUnchanged": 6,
+    "gitIndexAndHeadUnchanged": true,
+    "onlyNewTaskFile": ".codex-kit/verification/latest.json",
+    "wrongIdentity": "REJECTED",
+    "stalePreFixIdentity": "REJECTED",
+    "missingArtifact": "REJECTED",
+    "negativeChecks": "In-memory report candidates; final task never mutated"
+  },
+  "effectivePolicy": {
+    "sandbox": "workspace-write",
+    "approvals": "on-request + auto_review",
+    "taskNetwork": "restricted",
+    "windowsSandbox": "unelevated requested; OS token level not independently attested"
+  },
+  "skills": {
+    "CEK": 8,
+    "userGlobal": 143,
+    "system": 5,
+    "globalSource": "user-global .agents/skills",
+    "accountSyncOrigin": "NOT_ASSUMED",
+    "contextBudgetWarning": true
+  },
+  "limitations": [
+    "One tiny fixture is not a general reliability or success-rate estimate",
+    "No new model execution on this beta artifact",
+    "No interruption recovery or arbitrary exactly-once side-effect proof",
+    "No native Linux/macOS/Desktop compatibility promotion",
+    "No CEK-vs-ECC superiority, latency advantage or cost claim",
+    "Code Mode marked under development; model-list refresh timed out but task completed",
+    "Build/typecheck/lint skipped: fixture had no such configuration"
+  ],
+  "provenance": {
+    "rawArtifactsPublic": false,
+    "rawArtifactsRetainedUnmodifiedLocally": true,
+    "rawManifestSHA256": "c224b3557184ddebd1ad06331aee14c2fb35b4fdd193b11b064379b9943262ac",
+    "rawArtifactDigests": [
+      {
+        "path": "final-result.json",
+        "bytes": 3386,
+        "sha256": "509756d83ac94ea3758e66db834c7202bf8d1f1d134e879cd74ea756d35dcc73"
+      },
+      {
+        "path": "independent-validation.json",
+        "bytes": 1716,
+        "sha256": "f581076fcce11af928d65c992434eeceeeda69c8932ac305b5570cfc0cff2a66"
+      },
+      {
+        "path": "actual-runtime-context.json",
+        "bytes": 2881,
+        "sha256": "be324e4c2371e9f3cb55a75492d37ef52875b81a5b6cdb34bd2914888f3b9193"
+      },
+      {
+        "path": "actual-session-skills.json",
+        "bytes": 19388,
+        "sha256": "a597132e290115200d0e4866f8762927276ce6d1f89b426918bce40ce7036a69"
+      },
+      {
+        "path": "native-reviewer-evidence.json",
+        "bytes": 1096,
+        "sha256": "de2c53f3436d77568ff02ba172ae4c351cd43e360b8cbe9cd7188b96484a7177"
+      },
+      {
+        "path": "model-events.jsonl",
+        "bytes": 30708,
+        "sha256": "3cbf4a9173a785f7eb3b4b26ecd366d9bf48b053137a3a2292565a875e959fd8"
+      },
+      {
+        "path": "model-prompt.txt",
+        "bytes": 3805,
+        "sha256": "b60581df316ecdac300b06ea218d6561a5f5742963dbd38377de14fb0562f90c"
+      },
+      {
+        "path": "model-process-result.json",
+        "bytes": 220,
+        "sha256": "901d961df08214637d40be3ab27369d219da4796aeed59da9190ffed3145280a"
+      },
+      {
+        "path": "model-final.txt",
+        "bytes": 2092,
+        "sha256": "8ec7b7b233043a14abd573d0eb90e9bdbed108b09e0242909e423f5ea8239e0f"
+      },
+      {
+        "path": "independent-tests.stdout",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": "independent-tests.stderr",
+        "bytes": 333,
+        "sha256": "203bd430a6c2dae037a95687b20f7fe2183923b69684613d073a766a43a54336"
+      },
+      {
+        "path": "independent-diff.stdout",
+        "bytes": 333,
+        "sha256": "d73ac45ff2f6548c34a25d163dfb31af5f9b9f5468b551d682cf649a3661baff"
+      }
+    ],
+    "publicPaths": "Only repository-relative paths; private roots, session identifiers, login codes and profiles omitted",
+    "reproducibility": "Published recipe repeats the method, not an exact model outcome or portable candidate digest"
+  },
+  "launchObservations": [
+    "First public install required creation of an empty CODEX_HOME; failure retained",
+    "One pre-model launcher argument rejection was corrected before the single real task; no task retry",
+    "First post-login helper lacked a normal Windows home variable; fixed helper environment, no product policy bypass"
+  ]
+}

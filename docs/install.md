@@ -9,9 +9,12 @@ user-owned runtime directory. The complete package includes `bin/codex.exe`,
 `codex-package.json`, the Code Mode host, command runner, sandbox setup and `rg`.
 Do not substitute the single-executable archive or an npm launcher for this
 configuration. Do not replace a normal installation or copy an existing profile.
+Keep runtime, task and profile directories outside the CEK source checkout.
+The local marketplace snapshots the source directory; install only from a fresh
+public checkout, with no ignored private files or local profiles beneath it.
 
 ```powershell
-$CekRuntime = Join-Path (Get-Location).Path '.codex-kit/local/codex-runtime-0.155.1'
+$CekRuntime = Join-Path $env:LOCALAPPDATA 'CEK-Diagnostic/runtime-0.155.1'
 $CekArchive = "$CekRuntime.tar.gz"
 if ((Test-Path -LiteralPath $CekRuntime) -or (Test-Path -LiteralPath $CekArchive)) { throw 'Choose new runtime and archive paths; preserve existing files.' }
 New-Item -ItemType Directory -Path (Split-Path -Parent $CekRuntime) -Force | Out-Null
@@ -37,7 +40,12 @@ verifies exact canary bytes. It performs no login, model call or Codex shell tas
 ## Managed installation
 
 Run all commands from the CEK repository root and pass the same project,
-runtime and intentionally isolated profile each time. `<project-root>` must exist.
+runtime and intentionally isolated profile each time. `<project-root>` and
+`<isolated-profile>` must exist before CLI calls. Create a new empty profile with
+`New-Item -ItemType Directory -Path <isolated-profile>`; do not copy another profile.
+The source checkout and CODEX_HOME must not overlap in either direction;
+`CEK_SOURCE_PROFILE_OVERLAP` fails before native marketplace/profile commands or managed writes.
+See the [complete quickstart](quickstart.md) for safe path preparation.
 No authentication is needed for installation or the host probe.
 
 ```text
@@ -54,7 +62,7 @@ For direct `plugin list --json` or `debug prompt-input` CLI discovery commands,
 set `CODEX_HOME` in that child process to the same isolated profile. A prompt-input
 preview demonstrates enumeration, not model execution. Do not substitute an
 authenticated historical profile. Model workflows require a separately available,
-authorized login and remain NOT_RUN without one.
+authorized login. Installation and preview alone do not establish model success.
 
 The public CLI preflights the approved binary/host pair and matching version
 before lifecycle writes. An unsupported, modified or incomplete runtime fails
@@ -77,8 +85,8 @@ Uninstall rechecks the marketplace root immediately before any plugin/marketplac
 
 ## Support boundary
 
-The native plugin packages eight plugin-native skills and default `hooks/hooks.json`; lifecycle verification proves the installed cache matches those shipped files. The current non-model boundary is installation, plugin enumeration, skill prompt preview and the bounded native-host probe. Model-driven tasks, native reviewer execution and model tool/shell integration are NOT_RUN until genuinely executed.
+The native plugin packages eight plugin-native skills and default `hooks/hooks.json`; lifecycle verification proves the installed cache matches those shipped files. The unauthenticated boundary is installation, plugin enumeration, skill prompt preview and the bounded native-host probe. A separately recorded, authenticated one-task workflow on main e5dc249 verified real skill reads, native tools, a code fix and a distinct project-local reviewer; see the [beta notes](release/v1.1-beta.1.md). Other model workflows remain untested.
 
-The provisioned reviewer is a Codex-native project-local role. Its file installation does not prove a distinct reviewer executed. Historical 0.153.0 hook/reviewer/compaction acceptance is not promoted to 0.155.1. Hooks are guardrails, not a sandbox. No Codex Desktop behavior is inferred. See [current and historical boundaries](verification/runtime-compatibility.md).
+The provisioned reviewer is a Codex-native project-local role. Its file installation does not prove a distinct reviewer executed. Historical 0.153.0 acceptance is not promoted to 0.155.1. The new reviewer observation is independent evidence for one task; hook/compaction coverage is not inferred. Hooks are guardrails, not a sandbox. No Codex Desktop behavior is inferred. See [current and historical boundaries](verification/runtime-compatibility.md).
 
 The PowerShell `scripts/install.ps1`, `scripts/update.ps1`, and `scripts/uninstall.ps1` flow remains a separate ownership-aware installer for six core skills. It does not install the native plugin or provision project-local agents.

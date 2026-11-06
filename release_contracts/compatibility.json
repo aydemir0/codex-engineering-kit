@@ -6,9 +6,9 @@
     "packageSHA256": "f45c273b7835c192aaa9cef5b93aa9528966ac7301444632de80a565a9bf14e8",
     "cliSHA256": "eba0f32c976667cb9298efafd98513e823eeda7b576a03ec658bb8be8d336316",
     "hostSHA256": "480da4a9a98b5b54d6656d731fbcc00c73fd4d0fc4b9aaceafc9fbdf08a7d523",
-    "modelDrivenWorkflow": "NOT_RUN",
-    "scope": "Non-model managed installation, plugin/skill enumeration and bounded native-host delegate probe only",
-    "evidence": ["docs/verification/runtime-compatibility.md"]
+    "modelDrivenWorkflow": "PASS",
+    "scope": "One representative model-driven task on main e5dc249 and package 1.0.0; not a beta artifact rerun, general task-success rate, recovery or cross-platform claim",
+    "evidence": ["docs/verification/runtime-compatibility.md", "docs/research/evidence/cek-real-workflow-20261106.json"]
   },
   "compatibility": [
     {
