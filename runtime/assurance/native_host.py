@@ -19,11 +19,23 @@ import threading
 import time
 from typing import BinaryIO
 
+RUNTIME_VERSION = "0.155.1"
+
 HOSTS = {
     "eba0f32c976667cb9298efafd98513e823eeda7b576a03ec658bb8be8d336316":
         "480da4a9a98b5b54d6656d731fbcc00c73fd4d0fc4b9aaceafc9fbdf08a7d523",
     "e4c11374bd9de8ad5c3b7617fd4654bb7839901edb0863f9930666863c7a021b":
         "1d0569ec6390b4f446ecc7cd66ec7e5103648d55e065d45dbca19120d0bbd056",
+}
+# Files from the SHA-256-verified official complete Windows x64 release archive.
+# This narrower managed-install layout does not change standalone host support.
+PACKAGE_FILES = {
+    "codex-package.json": "64a1994514c461a7fbf5a73367a31c21d7f328ac07ec64a920994700eae5b3b9",
+    "bin/codex.exe": "eba0f32c976667cb9298efafd98513e823eeda7b576a03ec658bb8be8d336316",
+    "bin/codex-code-mode-host.exe": "480da4a9a98b5b54d6656d731fbcc00c73fd4d0fc4b9aaceafc9fbdf08a7d523",
+    "codex-path/rg.exe": "14231169855ec5205cf5a1b6f1db358ff4aed4247c86b69ce8aae647c77f6680",
+    "codex-resources/codex-command-runner.exe": "0431ee03aaf7e3c2ecda92017ef2fb9750d66221917467132c2136f078924b6c",
+    "codex-resources/codex-windows-sandbox-setup.exe": "a430e15894ef450ee9003459597f95b3e3db5ac1e260f662bbc5d7db4e855047",
 }
 MAX_FRAME = 65536
 CANARY = b"CEK_CODE_MODE_CAPABILITY_OK\n"
@@ -81,14 +93,50 @@ def resolve_host(executable: Path) -> Path:
     return executable.with_name("codex-code-mode-host.exe")
 
 
+def require_complete_package(executable: Path) -> None:
+    """Require the reviewed managed-install package, not a launcher or partial copy."""
+    executable = executable.absolute()
+    if executable.name.casefold() != "codex.exe" or executable.parent.name.casefold() != "bin":
+        raise NativeHostError("CODE_MODE_RUNTIME_COMPLETE_PACKAGE_REQUIRED")
+    root = executable.parent.parent
+    for relative, expected in PACKAGE_FILES.items():
+        path = root / relative
+        _regular(path)
+        if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+            raise NativeHostError("CODE_MODE_RUNTIME_PACKAGE_DIGEST")
+
+
 def require_native_host(executable: Path, *, timeout_seconds: float = 10) -> dict:
+    if not 0 < timeout_seconds <= 30:
+        raise NativeHostError("CODE_MODE_HOST_INVALID_TIMEOUT")
+    started = time.monotonic()
+    executable = executable.absolute()
     host = resolve_host(executable)
     _regular(host)
     _regular(executable)
-    expected = HOSTS.get(hashlib.sha256(executable.read_bytes()).hexdigest())
+    runtime_digest = hashlib.sha256(executable.read_bytes()).hexdigest()
+    expected = HOSTS.get(runtime_digest)
     if expected is None:
         raise NativeHostError("CODE_MODE_RUNTIME_UNSUPPORTED")
-    return probe_host(host, expected_sha256=expected, timeout_seconds=timeout_seconds)
+    # Query only a digest-approved executable, with no personal configuration,
+    # credential environment or account/profile access.
+    env = {key: os.environ[key] for key in ("PATH", "SYSTEMROOT", "TEMP", "TMP") if key in os.environ}
+    try:
+        with tempfile.TemporaryDirectory(prefix="cek-runtime-version-") as directory:
+            env["CODEX_HOME"] = str(Path(directory) / "unused-profile")
+            version = subprocess.run([str(executable), "--version"], cwd=directory, env=env,
+                                     capture_output=True, check=False, timeout=timeout_seconds)
+    except subprocess.TimeoutExpired as error:
+        raise NativeHostError("CODE_MODE_HOST_TIMEOUT") from error
+    except OSError as error:
+        raise NativeHostError("CODE_MODE_RUNTIME_VERSION_FAILED") from error
+    if version.returncode != 0 or version.stdout.strip() != f"codex-cli {RUNTIME_VERSION}".encode():
+        raise NativeHostError("CODE_MODE_RUNTIME_VERSION_MISMATCH")
+    remaining = timeout_seconds - (time.monotonic() - started)
+    if remaining <= 0:
+        raise NativeHostError("CODE_MODE_HOST_TIMEOUT")
+    result = probe_host(host, expected_sha256=expected, timeout_seconds=remaining)
+    return {**result, "runtimeVersion": RUNTIME_VERSION, "runtimeSHA256": runtime_digest}
 
 
 def probe_host(host: Path, *, expected_sha256: str, timeout_seconds: float = 10) -> dict:

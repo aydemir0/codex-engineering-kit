@@ -114,24 +114,28 @@ git clone https://github.com/aydemir0/codex-engineering-kit.git
 cd codex-engineering-kit
 ```
 
-The supported managed onboarding path requires Python 3.11+ and exactly Codex CLI 0.153.0. Run it from the repository root and provide the project that should receive the shipped project-local reviewer:
+The supported managed onboarding path requires Python 3.11+ and exactly Codex CLI 0.155.1 from the complete official Windows x64 package. Follow [the pinned runtime setup](docs/install.md) first; an npm launcher or a single downloaded CLI executable is not this validated native configuration. Run from the repository root and provide the project that should receive the shipped project-local reviewer:
 
 ```text
-python scripts/cek_lifecycle.py install --project <project-root>
-python scripts/cek_lifecycle.py verify --project <project-root>
+python scripts/cek_lifecycle.py install --project <project-root> --codex <runtime>/bin/codex.exe
+python scripts/cek_lifecycle.py verify --project <project-root> --codex <runtime>/bin/codex.exe
 ```
 
-The install command registers the repository-local marketplace when needed, installs the native plugin into the selected `CODEX_HOME`, verifies the cached `.codex-plugin/plugin.json`, eight plugin-native skills, and `hooks/hooks.json`, and provisions `.codex/agents/reviewer.toml` into the project. It writes two ownership manifests: `$CODEX_HOME/codex-engineering-kit.install.json` for the managed plugin and `<project>/.codex/codex-engineering-kit.install.json` for the managed reviewer.
+The install command preflights the approved runtime/host pair, registers the repository-local marketplace when needed, installs the native plugin into the selected `CODEX_HOME`, verifies the cached `.codex-plugin/plugin.json`, eight plugin-native skills, and `hooks/hooks.json`, and provisions `.codex/agents/reviewer.toml` into the project. It writes two ownership manifests: `$CODEX_HOME/codex-engineering-kit.install.json` for the managed plugin and `<project>/.codex/codex-engineering-kit.install.json` for the managed reviewer.
+
+The 0.147.0/0.153.0 tables and release evidence retain their historical,
+feature-specific scope. They do not establish model workflows, hooks or reviewer
+execution on 0.155.1. See [current runtime boundaries](docs/verification/runtime-compatibility.md).
 
 The reviewer is a Codex-native **project-local** agent. It is not a plugin-native custom agent. Plugin-native custom agents are unsupported/deferred on Codex CLI 0.153.0 because plugin installation does not register custom agent roles there.
 
 Update, verify again, and uninstall with the same project and `CODEX_HOME`:
 
 ```text
-python scripts/cek_lifecycle.py update --project <project-root>
-python scripts/cek_lifecycle.py verify --project <project-root>
-python scripts/cek_lifecycle.py uninstall --project <project-root>
-python scripts/cek_lifecycle.py verify-clean --project <project-root>
+python scripts/cek_lifecycle.py update --project <project-root> --codex <runtime>/bin/codex.exe
+python scripts/cek_lifecycle.py verify --project <project-root> --codex <runtime>/bin/codex.exe
+python scripts/cek_lifecycle.py uninstall --project <project-root> --codex <runtime>/bin/codex.exe
+python scripts/cek_lifecycle.py verify-clean --project <project-root> --codex <runtime>/bin/codex.exe
 ```
 
 The lifecycle refuses a pre-existing reviewer, a marketplace name bound to another checkout, modified managed content, an unsupported CLI version, and incomplete ownership state. Update replaces only hash-matched CEK-owned content. Uninstall delegates plugin/cache removal to Codex, removes a marketplace only when this lifecycle added it, removes the project-local reviewer only when its ownership hash still matches, and preserves unrelated or modified user files. The managed path does not copy `auth.json`, credentials, normal-profile configuration, or user-private skills.

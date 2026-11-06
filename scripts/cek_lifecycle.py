@@ -12,8 +12,12 @@ import tempfile
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
+# Preserve the documented direct-script entry point as well as module imports.
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from runtime.assurance.native_host import NativeHostError, RUNTIME_VERSION, require_complete_package, require_native_host
 
-SUPPORTED_RUNTIME = "codex-cli 0.153.0"
+SUPPORTED_RUNTIME = f"codex-cli {RUNTIME_VERSION}"
 PLUGIN_NAME = "codex-engineering-kit"
 PROJECT_ASSET = Path(".codex/agents/reviewer.toml")
 GLOBAL_STATE_NAME = "codex-engineering-kit.install.json"
@@ -173,7 +177,7 @@ def _runtime(run: Runner, env: dict[str, str]) -> None:
     result = run(["--version"], env)
     actual = str(result.get("stdout", "")).strip()
     if result.get("returncode") != 0 or actual != SUPPORTED_RUNTIME:
-        raise LifecycleError(f"managed onboarding requires Codex CLI 0.153.0; found {actual or 'unavailable'}")
+        raise LifecycleError(f"managed onboarding requires Codex CLI {RUNTIME_VERSION}; found {actual or 'unavailable'}")
 
 
 def _marketplaces(run: Runner, env: dict[str, str]) -> dict[str, Path]:
@@ -557,8 +561,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         "verify-clean": verify_clean,
     }
     try:
+        executable = Path(shutil.which(args.codex) or args.codex)
+        require_complete_package(executable)
+        require_native_host(executable)
         result = actions[args.action](Path(args.repo), Path(args.project), Path(args.codex_home), runner)
-    except (LifecycleError, FileNotFoundError) as exc:
+    except (LifecycleError, NativeHostError, FileNotFoundError) as exc:
         print(f"FAIL: {exc}", file=sys.stderr)
         return 1
     print(json.dumps(result, sort_keys=True))

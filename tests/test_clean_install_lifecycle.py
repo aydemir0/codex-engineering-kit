@@ -11,7 +11,7 @@ from scripts.cek_lifecycle import LifecycleError, install, main, uninstall, upda
 
 
 class FakeCodex:
-    def __init__(self, *, version: str = "codex-cli 0.153.0", marketplace_root: str | None = None):
+    def __init__(self, *, version: str = "codex-cli 0.155.1", marketplace_root: str | None = None):
         self.version = version
         self.marketplace_root = marketplace_root
         self.plugin_installed = False
@@ -197,7 +197,7 @@ class CleanInstallLifecycleTests(unittest.TestCase):
 
     def test_documented_cli_dispatches_install(self) -> None:
         codex = FakeCodex()
-        with patch(
+        with patch("scripts.cek_lifecycle.require_complete_package"), patch("scripts.cek_lifecycle.require_native_host", return_value={}), patch(
             "scripts.cek_lifecycle.run_codex",
             side_effect=lambda _executable, args, env: codex(args, env),
         ):
@@ -304,7 +304,7 @@ class CleanInstallLifecycleTests(unittest.TestCase):
     def test_unsupported_cli_fails_before_any_write(self) -> None:
         codex = FakeCodex(version="codex-cli 0.154.0")
 
-        with self.assertRaisesRegex(LifecycleError, "requires Codex CLI 0.153.0"):
+        with self.assertRaisesRegex(LifecycleError, "requires Codex CLI 0.155.1"):
             install(self.repo, self.project, self.home, codex)
 
         self.assertFalse(self.home.exists())
