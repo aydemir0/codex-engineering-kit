@@ -87,8 +87,8 @@ class ReleaseDocumentationTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertEqual(manifest["version"], "1.0.0")
-        self.assertIn("**Status:** v1.0.0", readme)
+        self.assertEqual(manifest["version"], "1.1.0-beta.1")
+        self.assertIn("**Status:** v1.1.0-beta.1", readme)
         self.assertIn("docs/release/v1.0-readiness.md", readme)
         self.assertNotIn("**Status:** v0.2 alpha", readme)
         self.assertIn("v1.0 security contract", security)
@@ -102,7 +102,7 @@ class ReleaseDocumentationTests(unittest.TestCase):
         self.assertIn("Historical", historical)
         self.assertIn("not the current v1 release decision", historical)
         self.assertNotIn("remain v0.2 alpha", readiness)
-        self.assertIn('update_result["toVersion"] == "1.0.0"', acceptance)
+        self.assertIn('update_result["toVersion"] == json.loads(current_manifest)["version"]', acceptance)
 
     def test_release_documents_name_both_baselines(self) -> None:
         compatibility = (ROOT / "docs" / "release" / "compatibility-matrix.md").read_text(encoding="utf-8")

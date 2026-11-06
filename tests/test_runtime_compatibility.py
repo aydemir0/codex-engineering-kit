@@ -43,7 +43,11 @@ class RuntimeCompatibilityTests(unittest.TestCase):
         current = json.loads((ROOT / "release_contracts/compatibility.json").read_text(encoding="utf-8"))["currentProductRuntime"]
         self.assertEqual(current["cliVersion"], native_host.RUNTIME_VERSION)
         self.assertEqual(native_host.HOSTS[current["cliSHA256"]], current["hostSHA256"])
-        self.assertEqual(current["modelDrivenWorkflow"], "NOT_RUN")
+        self.assertEqual(current["modelDrivenWorkflow"], "PASS")
+        self.assertIn("One representative", current["scope"])
+        self.assertIn("not a beta artifact rerun", current["scope"])
+        for evidence in current["evidence"]:
+            self.assertTrue((ROOT / evidence).is_file())
         self.assertIn(current["packageSHA256"], install)
         self.assertIn(current["packageUrl"], install)
 

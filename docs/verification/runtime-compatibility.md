@@ -45,8 +45,18 @@ CLI prompt-input enumeration can show the eight required skills without a model
 call. The host probe proves JavaScript and one bounded diagnostic delegate are
 callable; it does not test the model's real shell tool or task reasoning.
 
-Real model workflows, independent native reviewer execution and authenticated
-hook/compaction behavior on 0.155.1 remain **NOT_RUN** unless separately exercised.
+A separately authenticated run on source commit
+`e5dc24941f9f3b858f1534d8404598579c5d8564` and package 1.0.0 completed **one**
+representative bug fix using `gpt-6-astra`: installed skill reads, native shell,
+RED/GREEN, a distinct native reviewer and independent candidate/artifact checks.
+See the [sanitized record](../research/evidence/cek-real-workflow-20261106.json).
+The unpublished beta changes packaging/docs, not the workflow engine; no new
+model execution on the beta artifact is claimed.
+
+Authenticated hook/compaction acceptance, model interruption recovery, other
+agent roles, other tasks and other OS/architecture native runtimes remain
+**NOT_RUN** on this configuration. Global skill inheritance remains observable;
+a separate CODEX_HOME is not complete context isolation.
 Historical 0.147.0/0.153.0 and Desktop 0.152.0 compatibility rows and evidence are
 retained unchanged. No historical result is promoted to the new configuration.
-The normal plugin version remains 1.0.0; this change does not publish a v1.1 release.
+The current candidate package is 1.1.0-beta.1; it has not been published. Historical evidence is not a blanket v1.1 release claim.

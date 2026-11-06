@@ -4,7 +4,7 @@ import json
 import shutil
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from pathlib import Path
 
 from scripts.cek_lifecycle import LifecycleError, install, main, uninstall, update, verify, verify_clean
@@ -104,6 +104,20 @@ class CleanInstallLifecycleTests(unittest.TestCase):
         (self.repo / "skills" / "example").mkdir(parents=True)
         self.project.mkdir()
         self._write_source("1.0.0", "reviewer-v1")
+
+    def test_source_profile_overlap_fails_before_native_commands_or_writes(self) -> None:
+        sentinel = self.root / "foreign-owner.txt"
+        sentinel.write_bytes(b"preserve foreign state")
+        for action in (install, verify, update, uninstall, verify_clean):
+            for home in (self.repo, self.repo / "nested-profile", self.repo.parent):
+                with self.subTest(action=action.__name__, home=home.name):
+                    native = Mock()
+                    with self.assertRaisesRegex(LifecycleError, "CEK_SOURCE_PROFILE_OVERLAP"):
+                        action(self.repo, self.project, home, native)
+                    native.assert_not_called()
+                    self.assertEqual(sentinel.read_bytes(), b"preserve foreign state")
+                    self.assertFalse((self.repo / "nested-profile").exists())
+                    self.assertFalse((self.project / ".codex").exists())
 
     def tearDown(self) -> None:
         self.temp.cleanup()

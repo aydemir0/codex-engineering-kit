@@ -2,15 +2,36 @@
 
 > Evidence-bound engineering workflows for OpenAI Codex: native plugin packaging, focused skills and subagents, lifecycle guardrails, verification, evals, state/compaction, and release contracts.
 
-**Status:** v1.0.0 release candidate · evidence-bound · independent community project
+**Status:** v1.1.0-beta.1 release candidate · unpublished · independent community project
 
 Codex Engineering Kit (CEK) is an independent engineering toolkit for Codex. It turns planning, architecture, debugging, review, testing, security, performance work, and release readiness into explicit, inspectable contracts.
 
 CEK is **not an official OpenAI or Anthropic project**. No endorsement is implied. Runtime claims are intentionally scoped to the exact evidence recorded in this repository.
 
+## Try the Windows beta candidate
+
+Start with the [user quickstart](docs/quickstart.md), [troubleshooting](docs/troubleshooting.md)
+and [beta release notes](docs/release/v1.1-beta.1.md). The supported native setup is
+Windows x64, Python 3.11+, Git and the complete official Codex CLI 0.155.1 package.
+Installation and the local integrity demo require no login. A model task requires
+your separately authorized Codex login; CEK never transfers credentials.
+
+One real model-driven task passed on main `e5dc249`: installed CEK skills were
+read, a failing test was reproduced, one line was fixed, a distinct native reviewer
+ran, and a separate process verified the final artifacts and candidate identity.
+This is one small fixture, not a task-success rate or competitive benchmark.
+See the [scoped workflow record](docs/research/evidence/cek-real-workflow-20261106.json).
+The beta changes packaging, documentation and install-path preflight; that model run used the prior 1.0.0
+package on the named main commit, not this unpublished beta artifact.
+
+A fresh `CODEX_HOME` still inherited 143 user-global skills and five system skills
+in the observed session, in addition to CEK's eight. It is not complete skill
+isolation. No account plugins or global skills were changed. Model interruption
+recovery, costs and general reliability are not established by this run.
+
 ## Release evidence first
 
-v1.0.0 separates four kinds of statements:
+The retained v1.0 evidence separates four kinds of statements; the beta keeps those historical runtime scopes:
 
 | State | Meaning |
 | --- | --- |
@@ -23,7 +44,7 @@ Source-of-truth release documents:
 
 - [`docs/release/compatibility-matrix.md`](docs/release/compatibility-matrix.md) — per-surface CLI and separately tracked Desktop status;
 - [`docs/release/claim-evidence-matrix.md`](docs/release/claim-evidence-matrix.md) — allowed public wording and evidence for each v1 claim;
-- [`docs/release/v1.0-readiness.md`](docs/release/v1.0-readiness.md) — current release-gate decision and provenance;
+- [`docs/release/v1.0-readiness.md`](docs/release/v1.0-readiness.md) — retained v1.0 release-gate decision and provenance, not beta approval;
 - [`docs/benchmark.md`](docs/benchmark.md) — fixed benchmark protocol and reporting boundary;
 - [`docs/install.md`](docs/install.md) — managed lifecycle and ownership contract;
 - [`SECURITY.md`](SECURITY.md) — trust, secret, hook, and local-state boundaries.
@@ -114,28 +135,28 @@ git clone https://github.com/aydemir0/codex-engineering-kit.git
 cd codex-engineering-kit
 ```
 
-The supported managed onboarding path requires Python 3.11+ and exactly Codex CLI 0.155.1 from the complete official Windows x64 package. Follow [the pinned runtime setup](docs/install.md) first; an npm launcher or a single downloaded CLI executable is not this validated native configuration. Run from the repository root and provide the project that should receive the shipped project-local reviewer:
+The supported managed onboarding path requires Python 3.11+ and exactly Codex CLI 0.155.1 from the complete official Windows x64 package. Follow [the pinned runtime setup](docs/install.md) first; an npm launcher or a single downloaded CLI executable is not this validated native configuration. Create a new empty profile and disposable project as shown in the quickstart. Run from the repository root and explicitly select that profile and the project that should receive the shipped project-local reviewer:
 
 ```text
-python scripts/cek_lifecycle.py install --project <project-root> --codex <runtime>/bin/codex.exe
-python scripts/cek_lifecycle.py verify --project <project-root> --codex <runtime>/bin/codex.exe
+python scripts/cek_lifecycle.py install --project <project-root> --codex-home <isolated-profile> --codex <runtime>/bin/codex.exe
+python scripts/cek_lifecycle.py verify --project <project-root> --codex-home <isolated-profile> --codex <runtime>/bin/codex.exe
 ```
 
 The install command preflights the approved runtime/host pair, registers the repository-local marketplace when needed, installs the native plugin into the selected `CODEX_HOME`, verifies the cached `.codex-plugin/plugin.json`, eight plugin-native skills, and `hooks/hooks.json`, and provisions `.codex/agents/reviewer.toml` into the project. It writes two ownership manifests: `$CODEX_HOME/codex-engineering-kit.install.json` for the managed plugin and `<project>/.codex/codex-engineering-kit.install.json` for the managed reviewer.
 
 The 0.147.0/0.153.0 tables and release evidence retain their historical,
-feature-specific scope. They do not establish model workflows, hooks or reviewer
-execution on 0.155.1. See [current runtime boundaries](docs/verification/runtime-compatibility.md).
+feature-specific scope. They do not establish behavior on 0.155.1. The separately recorded one-task run
+establishes only its named workflow and reviewer behavior. See [current runtime boundaries](docs/verification/runtime-compatibility.md).
 
 The reviewer is a Codex-native **project-local** agent. It is not a plugin-native custom agent. Plugin-native custom agents are unsupported/deferred on Codex CLI 0.153.0 because plugin installation does not register custom agent roles there.
 
 Update, verify again, and uninstall with the same project and `CODEX_HOME`:
 
 ```text
-python scripts/cek_lifecycle.py update --project <project-root> --codex <runtime>/bin/codex.exe
-python scripts/cek_lifecycle.py verify --project <project-root> --codex <runtime>/bin/codex.exe
-python scripts/cek_lifecycle.py uninstall --project <project-root> --codex <runtime>/bin/codex.exe
-python scripts/cek_lifecycle.py verify-clean --project <project-root> --codex <runtime>/bin/codex.exe
+python scripts/cek_lifecycle.py update --project <project-root> --codex-home <isolated-profile> --codex <runtime>/bin/codex.exe
+python scripts/cek_lifecycle.py verify --project <project-root> --codex-home <isolated-profile> --codex <runtime>/bin/codex.exe
+python scripts/cek_lifecycle.py uninstall --project <project-root> --codex-home <isolated-profile> --codex <runtime>/bin/codex.exe
+python scripts/cek_lifecycle.py verify-clean --project <project-root> --codex-home <isolated-profile> --codex <runtime>/bin/codex.exe
 ```
 
 The lifecycle refuses a pre-existing reviewer, a marketplace name bound to another checkout, modified managed content, an unsupported CLI version, and incomplete ownership state. Update replaces only hash-matched CEK-owned content. Uninstall delegates plugin/cache removal to Codex, removes a marketplace only when this lifecycle added it, removes the project-local reviewer only when its ownership hash still matches, and preserves unrelated or modified user files. The managed path does not copy `auth.json`, credentials, normal-profile configuration, or user-private skills.
