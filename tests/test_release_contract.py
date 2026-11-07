@@ -252,11 +252,10 @@ class PlanFStaticContractTests(unittest.TestCase):
             self.assertNotIn("Status: CLOSED", risk_section)
             self.assertIn("explicit manifest", risk_section.casefold())
 
-    def test_external_repository_metadata_blocker_is_recorded(self) -> None:
-        text = (ROOT / "docs" / "release" / "v0.2-rc-checklist.md").read_text(encoding="utf-8")
-        self.assertIn("External repository metadata", text)
-        self.assertIn("Production-grade agentic software engineering toolkit for OpenAI Codex.", text)
-        self.assertIn("Evidence-bound engineering workflows for OpenAI Codex.", text)
+    def test_public_description_is_evidence_bound(self) -> None:
+        manifest = ROOT / ".codex-plugin" / "plugin.json"
+        description = json.loads(manifest.read_text(encoding="utf-8"))["description"]
+        self.assertEqual(description, "Evidence-bound engineering workflows for OpenAI Codex.")
 
 
 if __name__ == "__main__":

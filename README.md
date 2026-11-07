@@ -2,13 +2,13 @@
 
 > Evidence-bound engineering workflows for OpenAI Codex: native plugin packaging, focused skills and subagents, lifecycle guardrails, verification, evals, state/compaction, and release contracts.
 
-**Status:** v1.1.0-beta.1 release candidate · unpublished · independent community project
+**Status:** v1.1.0-beta.1 public pre-release ([GitHub Release](https://github.com/aydemir0/codex-engineering-kit/releases/tag/v1.1.0-beta.1)). CEK is an independent community project.
 
 Codex Engineering Kit (CEK) is an independent engineering toolkit for Codex. It turns planning, architecture, debugging, review, testing, security, performance work, and release readiness into explicit, inspectable contracts.
 
 CEK is **not an official OpenAI or Anthropic project**. No endorsement is implied. Runtime claims are intentionally scoped to the exact evidence recorded in this repository.
 
-## Try the Windows beta candidate
+## Try the Windows beta
 
 Start with the [user quickstart](docs/quickstart.md), [troubleshooting](docs/troubleshooting.md)
 and [beta release notes](docs/release/v1.1-beta.1.md). The supported native setup is
@@ -21,8 +21,8 @@ read, a failing test was reproduced, one line was fixed, a distinct native revie
 ran, and a separate process verified the final artifacts and candidate identity.
 This is one small fixture, not a task-success rate or competitive benchmark.
 See the [scoped workflow record](docs/research/evidence/cek-real-workflow-20261106.json).
-The beta changes packaging, documentation and install-path preflight; that model run used the prior 1.0.0
-package on the named main commit, not this unpublished beta artifact.
+That model run used package 1.0.0 on the named main commit. Model execution
+on the published beta artifact remains `NOT_RUN`.
 
 A fresh `CODEX_HOME` still inherited 143 user-global skills and five system skills
 in the observed session, in addition to CEK's eight. It is not complete skill
@@ -49,7 +49,7 @@ Source-of-truth release documents:
 - [`docs/install.md`](docs/install.md) — managed lifecycle and ownership contract;
 - [`SECURITY.md`](SECURITY.md) — trust, secret, hook, and local-state boundaries.
 
-OpenAI/Codex reviewer entrypoints:
+Reviewer resources:
 
 - [`docs/presentation/openai-project-brief.md`](docs/presentation/openai-project-brief.md) — concise evidence-bound product narrative;
 - [`docs/presentation/evidence-index.md`](docs/presentation/evidence-index.md) — material claims mapped to tests, runtime records, and limitations;
