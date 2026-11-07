@@ -11,8 +11,9 @@ CEK is **not an official OpenAI or Anthropic project**. No endorsement is implie
 ## Try the Windows beta
 
 Start with the [user quickstart](docs/quickstart.md), [troubleshooting](docs/troubleshooting.md)
-and [beta release notes](docs/release/v1.1-beta.1.md). The supported native setup is
-Windows x64, Python 3.11+, Git and the complete official Codex CLI 0.155.1 package.
+and [beta release notes](docs/release/v1.1-beta.1.md). The verified native configuration uses
+Windows x64 and the complete official Codex CLI 0.155.1 package. The quickstart requires
+PowerShell 7+, Python 3.11+ and Git.
 Installation and the local integrity demo require no login. A model task requires
 your separately authorized Codex login; CEK never transfers credentials.
 
@@ -122,7 +123,7 @@ codex-engineering-kit/
 - Git;
 - OpenAI Codex for runtime/plugin use;
 - **Python 3.11+ for v1.0.0 hook/runtime-dependent features and repository validation**;
-- PowerShell 7+ only for the PowerShell installer/update/uninstall and related Windows-oriented helper flows.
+- PowerShell 7+ for the Windows quickstart and all seven shipped PowerShell entrypoints.
 
 The repository's deterministic CI covers Ubuntu, Windows, and macOS contracts. That CI coverage must not be read as proof that every Codex runtime feature behaves identically on every OS.
 

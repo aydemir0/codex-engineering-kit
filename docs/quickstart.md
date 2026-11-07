@@ -1,10 +1,14 @@
 # Windows public beta quickstart
 
 The [v1.1.0-beta.1](https://github.com/aydemir0/codex-engineering-kit/releases/tag/v1.1.0-beta.1) pre-release uses the complete official
-Codex CLI 0.155.1 Windows x64 package, Python 3.11+ and Git. The prior main-based
-one-task observation is linked in the [beta notes](release/v1.1-beta.1.md).
+Codex CLI 0.155.1 Windows x64 package, PowerShell 7+, Python 3.11+ and Git.
+The prior main-based one-task observation is linked in the [beta notes](release/v1.1-beta.1.md).
 
 ## 1. Prepare the runtime and an empty profile
+
+Launch a fresh PowerShell 7 session with `pwsh`. Before running any
+installation commands, check `$PSVersionTable.PSVersion` and continue only
+if the major version is 7 or higher.
 
 Clone the published beta with `git clone --branch v1.1.0-beta.1 https://github.com/aydemir0/codex-engineering-kit.git`.
 In the checkout, `git rev-parse HEAD` should print
@@ -39,7 +43,6 @@ if ($LASTEXITCODE -ne 0) { throw 'Installed ownership/content check failed.' }
 Expect CEK `1.1.0-beta.1` and eight shipped skill files. Installation,
 plugin enumeration and skill preview are different from actual skill execution.
 A new `CODEX_HOME` does not isolate user-global `.agents/skills`.
-Use a new PowerShell window for this recipe so its environment selection is local.
 
 ## 2. No-login demonstration
 

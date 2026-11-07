@@ -4,7 +4,7 @@ The current managed native path supports exactly Codex CLI 0.155.1 and Python 3.
 
 ## Pinned public runtime setup (PowerShell)
 
-Requires Windows x64, Python 3.11+, Git and the Windows `tar` utility. Use a new,
+Requires Windows x64, PowerShell 7+, Python 3.11+, Git and the Windows `tar` utility. Use a new,
 user-owned runtime directory. The complete package includes `bin/codex.exe`,
 `codex-package.json`, the Code Mode host, command runner, sandbox setup and `rg`.
 Do not substitute the single-executable archive or an npm launcher for this
