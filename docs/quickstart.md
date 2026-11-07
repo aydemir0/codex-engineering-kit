@@ -1,13 +1,18 @@
 # Windows public beta quickstart
 
-This is the unpublished `1.1.0-beta.1` candidate. It uses the complete official
-Codex CLI 0.155.1 Windows x64 package, Python 3.11+ and Git. The prior main-based
-one-task observation is linked in the [beta notes](release/v1.1-beta.1.md).
+The [v1.1.0-beta.1](https://github.com/aydemir0/codex-engineering-kit/releases/tag/v1.1.0-beta.1) pre-release uses the complete official
+Codex CLI 0.155.1 Windows x64 package, PowerShell 7+, Python 3.11+ and Git.
+The prior main-based one-task observation is linked in the [beta notes](release/v1.1-beta.1.md).
 
 ## 1. Prepare the runtime and an empty profile
 
-Clone CEK and use the candidate checkout supplied by its reviewed PR/commit.
-Do not assume a beta tag or a downloadable CEK release already exists.
+Launch a fresh PowerShell 7 session with `pwsh`. Before running any
+installation commands, check `$PSVersionTable.PSVersion` and continue only
+if the major version is 7 or higher.
+
+Clone the published beta with `git clone --branch v1.1.0-beta.1 https://github.com/aydemir0/codex-engineering-kit.git`.
+In the checkout, `git rev-parse HEAD` should print
+`e4d9430f23af6a248ee322559c5c5a391f3e3339`.
 From its repository root, follow the exact download, archive checksum and
 Windows `tar` commands in [install.md](install.md). Keep `$CekCodex` pointing to
 that package's `bin/codex.exe`.
@@ -35,10 +40,9 @@ if ($LASTEXITCODE -ne 0) { throw 'Installed ownership/content check failed.' }
 & $CekCodex plugin list --json
 ```
 
-Expect the CEK candidate version and eight shipped skill files. Installation,
+Expect CEK `1.1.0-beta.1` and eight shipped skill files. Installation,
 plugin enumeration and skill preview are different from actual skill execution.
 A new `CODEX_HOME` does not isolate user-global `.agents/skills`.
-Use a new PowerShell window for this recipe so its environment selection is local.
 
 ## 2. No-login demonstration
 

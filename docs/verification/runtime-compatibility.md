@@ -50,8 +50,8 @@ A separately authenticated run on source commit
 representative bug fix using `gpt-6-astra`: installed skill reads, native shell,
 RED/GREEN, a distinct native reviewer and independent candidate/artifact checks.
 See the [sanitized record](../research/evidence/cek-real-workflow-20261106.json).
-The unpublished beta changes packaging/docs, not the workflow engine; no new
-model execution on the beta artifact is claimed.
+The published [v1.1.0-beta.1](https://github.com/aydemir0/codex-engineering-kit/releases/tag/v1.1.0-beta.1) pre-release updates packaging, onboarding
+and install-path preflight. Model execution on that artifact remains `NOT_RUN`.
 
 Authenticated hook/compaction acceptance, model interruption recovery, other
 agent roles, other tasks and other OS/architecture native runtimes remain
@@ -59,4 +59,3 @@ agent roles, other tasks and other OS/architecture native runtimes remain
 a separate CODEX_HOME is not complete context isolation.
 Historical 0.147.0/0.153.0 and Desktop 0.152.0 compatibility rows and evidence are
 retained unchanged. No historical result is promoted to the new configuration.
-The current candidate package is 1.1.0-beta.1; it has not been published. Historical evidence is not a blanket v1.1 release claim.

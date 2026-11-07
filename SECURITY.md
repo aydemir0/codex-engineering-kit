@@ -4,7 +4,10 @@ Codex Engineering Kit modifies local Codex/plugin or skill state, can execute bo
 
 ## Supported versions
 
-Security fixes target the latest release and the current `main` branch. The v1.0.0 release candidate must not be treated as a stable security contract without its corresponding exact-candidate release evidence.
+Security fixes target the latest release and the current `main` branch.
+[v1.1.0-beta.1](https://github.com/aydemir0/codex-engineering-kit/releases/tag/v1.1.0-beta.1)
+is a public pre-release. Its security evidence applies to the documented
+configuration and checks in the [beta release notes](docs/release/v1.1-beta.1.md).
 
 ## Reporting a vulnerability
 
@@ -81,6 +84,12 @@ The v1.0 security contract does not claim blanket security, feature parity, meas
 - `docs/release/claim-evidence-matrix.md`;
 - `docs/release/compatibility-matrix.md`;
 - `docs/release/v1.0-readiness.md`.
+
+### External Semgrep Cloud check
+
+The beta PR had one external Semgrep Cloud check alongside its 12 GitHub
+Actions jobs. Semgrep Cloud policies are externally managed. A checkout or
+fork alone cannot reproduce that policy or its scan result.
 
 ## Out of scope by design
 

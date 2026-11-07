@@ -1,6 +1,6 @@
 # Roadmap
 
-Codex Engineering Kit prioritizes evidence and bounded compatibility over expanding claims. v1.0.0 is the current release candidate; release readiness depends on the exact-candidate gate rather than the version label alone.
+[v1.1.0-beta.1](https://github.com/aydemir0/codex-engineering-kit/releases/tag/v1.1.0-beta.1) is the current public pre-release. Its scope and known limitations are recorded in the [beta release notes](docs/release/v1.1-beta.1.md).
 
 ## v0.1 — Engineering foundation
 
@@ -28,7 +28,7 @@ Historical and current compatibility limitations remain explicit:
 - the prior Desktop parent-wait observation remains unclassified;
 - no CLI result is promoted to Codex Desktop behavior.
 
-## v1.0 — OpenAI-ready Codex-native engineering system
+## v1.0 — Codex-native engineering system
 
 v1.0 is an evidence-gated program, not a catalog-size target. The approved architecture and execution program are:
 
@@ -44,22 +44,20 @@ The workstreams were executed in this order:
 5. skill/agent stocktake;
 6. authenticated 45-run benchmark;
 7. clean-install UX;
-8. OpenAI-ready presentation;
+8. public product presentation;
 9. exact-SHA/provenance v1.0 release gate.
 
-WS1 through WS8 are closed. WS9 remains the exact-SHA release gate. A workstream is complete only when its tests/evidence pass; v1.0.0 is not release-ready merely because the roadmap item exists.
+WS1 through WS8 closed before WS9 recorded the [v1.0 release-gate decision](docs/release/v1.0-readiness.md).
 
 The authenticated benchmark is complete with 45 authenticated runs: A 15/15 PASS, B 15/15 PASS, C 4/15 PASS, and 34 PASS / 11 retained FAIL, comprising 9 missing-lifecycle failures and 2 quality-contract failures. The failures were not retried or replaced. These measurements do not support an efficiency, context-reduction, latency, quality-superiority, statistical-significance, or benchmark-leadership claim.
 
-## Next release-readiness work
+## Remaining compatibility and release work
 
 - execute the exact Desktop 0.152.0 compatibility campaign in a suitable operator environment;
 - execute explicit-manifest hook acceptance on both declared baselines;
 - rerun and classify the SessionEnd timeout behavior;
 - rerun the bounded Desktop parent-wait case without assigning a root cause in advance;
-- reconcile release metadata/public surfaces;
-- obtain fresh exact-candidate CI and close only the proven release gate;
-- publish a release only after the RC checklist permits it.
+- validate any future release against its exact candidate and applicable release gates.
 
 ## Future work
 
