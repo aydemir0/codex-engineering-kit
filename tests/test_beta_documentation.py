@@ -10,10 +10,18 @@ class BetaDocumentationTests(unittest.TestCase):
     def test_candidate_identity_and_user_entrypoints_agree(self):
         version = json.loads((ROOT / '.codex-plugin/plugin.json').read_text())['version']
         self.assertEqual(version, '1.1.0-beta.1')
-        for name in ('README.md', 'docs/quickstart.md', 'docs/release/v1.1-beta.1.md'):
-            text = (ROOT / name).read_text(encoding='utf-8')
-            self.assertIn(version, text)
-            self.assertIn('unpublished', text)
+        release_url = f'https://github.com/aydemir0/codex-engineering-kit/releases/tag/v{version}'
+        for name in (
+            'README.md',
+            'ROADMAP.md',
+            'docs/quickstart.md',
+            'docs/release/v1.1-beta.1.md',
+            'docs/verification/runtime-compatibility.md',
+        ):
+            with self.subTest(name=name):
+                text = (ROOT / name).read_text(encoding='utf-8')
+                self.assertIn(release_url, text)
+                self.assertNotIn('unpublished', text.casefold())
         readme = (ROOT / 'README.md').read_text(encoding='utf-8')
         for name in ('docs/quickstart.md', 'docs/troubleshooting.md', 'docs/release/v1.1-beta.1.md'):
             self.assertIn(name, readme)

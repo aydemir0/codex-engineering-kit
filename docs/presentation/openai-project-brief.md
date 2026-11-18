@@ -1,4 +1,4 @@
-# Codex Engineering Kit: OpenAI Project Brief
+# Codex Engineering Kit: Project Brief
 
 Codex Engineering Kit (CEK) is an independent, evidence-bound engineering
 workflow for OpenAI Codex. It makes task routing, test-first implementation,
