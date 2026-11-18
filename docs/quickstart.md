@@ -2,7 +2,9 @@
 
 The [v1.1.0-beta.1](https://github.com/aydemir0/codex-engineering-kit/releases/tag/v1.1.0-beta.1) pre-release uses the complete official
 Codex CLI 0.155.1 Windows x64 package, PowerShell 7+, Python 3.11+ and Git.
-The prior main-based one-task observation is linked in the [beta notes](release/v1.1-beta.1.md).
+The earlier main-based task and a separate **18 November 2026 authentic smoke
+on this exact published beta tag** are distinguished in the
+[beta notes](release/v1.1-beta.1.md) and [sanitized smoke record](research/evidence/cek-beta-smoke-20261118.md).
 
 ## 1. Prepare the runtime and an empty profile
 
