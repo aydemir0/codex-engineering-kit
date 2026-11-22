@@ -81,6 +81,15 @@ class SecurityDocumentationContractTests(unittest.TestCase):
         ):
             self.assertIn(path, ignored)
 
+    def test_dependabot_actions_updates_are_review_only(self) -> None:
+        path = ROOT / ".github" / "dependabot.yml"
+        self.assertTrue(path.is_file())
+        content = path.read_text(encoding="utf-8")
+        self.assertIn('package-ecosystem: "github-actions"', content)
+        self.assertIn('interval: "weekly"', content)
+        self.assertIn('open-pull-requests-limit: 3', content)
+        self.assertNotIn("auto-merge:", content)
+
     def test_ci_actions_are_immutable_and_attribution_is_present(self) -> None:
         unpinned: list[str] = []
         for workflow in (ROOT / ".github" / "workflows").glob("*.yml"):

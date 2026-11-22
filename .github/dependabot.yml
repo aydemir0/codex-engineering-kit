@@ -1,0 +1,9 @@
+# Propose reviewed updates for SHA-pinned GitHub Actions. No automatic merging.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 3

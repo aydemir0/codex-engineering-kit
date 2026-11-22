@@ -69,6 +69,35 @@ Continuous learning produces `pending_review` candidates only. Candidates are no
 
 Read-only/custom-agent instructions constrain intended behavior but are not an operating-system sandbox. Repository/tool permissions and user review remain authoritative boundaries.
 
+### Verifier executes project-defined code
+
+Verification is **not** a passive security scanner. In supported projects it
+runs configured build, test, lint and/or typecheck commands with the invoking
+user's privileges. Project-controlled package scripts and test code are
+executable inputs; do not verify an unfamiliar repository as a trusted user
+or on a workstation with production credentials. For external beta testing,
+use only the documented disposable fixture and isolated Codex profile.
+
+On Windows, batch-backed commands use the operating system's system-directory
+`cmd.exe`, rather than the caller's `COMSPEC` or search `PATH`. Batch
+executable paths and arguments containing shell metacharacters are refused
+rather than interpolated. This is bounded hardening, not a guarantee that
+arbitrary project scripts are safe or a replacement for an OS sandbox.
+Some legitimate paths with special characters may require relocation.
+
+### Dependency update and scan coverage
+
+Dependabot vulnerability alerts are enabled for this repository. The
+`.github/dependabot.yml` configuration requests reviewed weekly GitHub
+Actions version-update PRs; there is **no automatic merge**. CI workflows
+continue to pin actions to full commit SHAs.
+
+GitHub Code Scanning and externally managed Semgrep Cloud checks are
+different security surfaces. A successful external PR check does not imply
+that GitHub has stored code-scanning results or that a local scan has no
+findings. Dependency alerts are not comprehensive for unmanifested or
+externally installed packages, including the separately pinned Codex CLI.
+
 ### Deterministic evidence vs model judgment
 
 When a condition can be verified through code, exit status, schema checks, tests, hashes, or file/state contracts, deterministic evidence takes priority over model judgment. Missing runtime evidence must not be promoted to PASS.
