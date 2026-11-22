@@ -39,8 +39,15 @@ python -B scripts/cek_lifecycle.py install --project $CekProject --codex-home $C
 if ($LASTEXITCODE -ne 0) { throw 'Installation failed; retain the output and stop.' }
 python -B scripts/cek_lifecycle.py verify --project $CekProject --codex-home $CekProfile --codex $CekCodex
 if ($LASTEXITCODE -ne 0) { throw 'Installed ownership/content check failed.' }
-& $CekCodex plugin list --json
+# The managed verify above already enumerates plugins.
+# Avoid a redundant, unbounded direct: & $CekCodex plugin list --json
 ```
+
+The published beta tag predates post-beta timeout hardening in `main`.
+Its managed lifecycle calls do **not** have the later bounded-timeout option.
+If a beta CLI child stalls, stop the invocation and preserve its isolated
+profile and user files for inspection. Do not retry with another profile or
+reinstall blindly.
 
 Expect CEK `1.1.0-beta.1` and eight shipped skill files. Installation,
 plugin enumeration and skill preview are different from actual skill execution.

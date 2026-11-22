@@ -158,15 +158,15 @@ class PackageManagerResolutionTests(unittest.TestCase):
     def test_script_command_rendering_is_manager_specific(self) -> None:
         self.assertEqual(
             package_script_command("npm", "test"),
-            ["npm", "run", "test", "--silent"],
+            ["npm", "run", "test"],
         )
         self.assertEqual(
             package_script_command("pnpm", "test"),
-            ["pnpm", "run", "test", "--silent"],
+            ["pnpm", "run", "test"],
         )
         self.assertEqual(
             package_script_command("yarn", "test"),
-            ["yarn", "run", "test", "--silent"],
+            ["yarn", "run", "test"],
         )
         self.assertEqual(
             package_script_command("bun", "test"),

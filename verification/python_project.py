@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ast
 import importlib.util
+import re
 import sys
 import tomllib
 from dataclasses import dataclass
@@ -14,6 +16,7 @@ from verification.process import ProcessResult, run_command
 @dataclass(frozen=True)
 class PythonPresetResult:
     steps: tuple[VerificationStep, ...]
+    test_families: tuple[tuple[str, str], ...] = ()
 
 
 def _default_module_available(name: str) -> bool:
@@ -47,13 +50,24 @@ def _process_evidence(result: ProcessResult) -> str:
 
 def _run_step(name: str, command: list[str], project_path: Path, runner) -> VerificationStep:
     result = runner(command, project_path)
+    status = result.status
+    exit_code = result.exit_code
+    evidence = _process_evidence(result)
+    if name == "tests" and "unittest" in command and status in {"passed", "failed"}:
+        # unittest exits 0 even when it discovers *zero* tests.
+        output = "\n".join((result.stdout_tail, result.stderr_tail))
+        match = re.search(r"\bRan\s+(\d+)\s+tests?\b", output)
+        if match and int(match.group(1)) == 0:
+            status = "unavailable"
+            exit_code = None
+            evidence = "unittest discovered zero tests; verification coverage is incomplete."
     return VerificationStep(
         name=name,
         command=list(command),
-        status=result.status,
-        exit_code=result.exit_code,
+        status=status,
+        exit_code=exit_code,
         duration_ms=result.duration_ms,
-        evidence=_process_evidence(result),
+        evidence=evidence,
     )
 
 
@@ -95,6 +109,51 @@ def _has_unittest_tree(project_path: Path) -> bool:
     if not tests_dir.is_dir():
         return False
     return any(path.is_file() for path in tests_dir.rglob("test*.py"))
+
+
+def _test_styles(project_path: Path) -> frozenset[str]:
+    """Conservatively identify pytest-style functions and unittest.TestCase.
+
+    This is a discovery hint, not proof that a particular test was collected.
+    No candidate Python source is imported or executed during inspection.
+    """
+    styles: set[str] = set()
+    tests_dir = project_path / "tests"
+    paths = list(tests_dir.rglob("test*.py")) if tests_dir.is_dir() else []
+    if tests_dir.is_dir():
+        paths += list(tests_dir.rglob("*_test.py"))
+    paths += list(project_path.glob("test_*.py"))
+    paths += list(project_path.glob("*_test.py"))
+    for path in sorted(set(paths)):
+        if path.is_symlink() or not path.is_file():
+            styles.add("unknown")
+            continue
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=path.name)
+        except (OSError, UnicodeDecodeError, SyntaxError, ValueError):
+            styles.add("unknown")
+            continue
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_"):
+                styles.add("pytest")
+            elif isinstance(node, ast.ClassDef):
+                methods = any(
+                    isinstance(method, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and method.name.startswith("test_")
+                    for method in node.body
+                )
+                if not methods:
+                    continue
+                is_unittest = any(
+                    (isinstance(base, ast.Name) and base.id == "TestCase")
+                    or (isinstance(base, ast.Attribute) and base.attr == "TestCase")
+                    for base in node.bases
+                )
+                if is_unittest:
+                    styles.add("unittest")
+                elif node.name.startswith("Test"):
+                    styles.add("pytest")
+    return frozenset(styles)
 
 
 def _ruff_configured(project_path: Path, pyproject: dict) -> bool:
@@ -158,22 +217,56 @@ def discover_python_steps(
     else:
         steps.append(_skipped("lint", "No runnable Ruff configuration discovered."))
 
-    if _has_pytest_marker(project_path, pyproject):
+    styles = _test_styles(project_path)
+    wants_pytest = _has_pytest_marker(project_path, pyproject) or "pytest" in styles
+    has_unittest = "unittest" in styles or (_has_unittest_tree(project_path) and not wants_pytest)
+    test_families: list[tuple[str, str]] = []
+    if wants_pytest and module_available("pytest"):
         command = [sys.executable, "-m", "pytest"]
-        if module_available("pytest"):
-            steps.append(_run_step("tests", command, project_path, runner))
-        else:
-            steps.append(_unavailable("tests", command, "pytest"))
-    elif _has_unittest_tree(project_path):
-        steps.append(
-            _run_step(
+        step = _run_step("tests", command, project_path, runner)
+        steps.append(step)
+        test_families.append(("python-pytest", step.status))
+        if "unittest" in styles:
+            test_families.append(("python-unittest", "delegated-to-pytest"))
+    elif wants_pytest:
+        if has_unittest:
+            step = _run_step(
                 "tests",
                 [sys.executable, "-m", "unittest", "discover", "-s", "tests"],
                 project_path,
                 runner,
             )
+            steps.append(step)
+            test_families.append(("python-unittest", step.status))
+            missing_name = "tests-pytest"
+        else:
+            missing_name = "tests"
+        steps.append(_unavailable(missing_name, [sys.executable, "-m", "pytest"], "pytest"))
+        test_families.append(("python-pytest", "unavailable"))
+    elif _has_unittest_tree(project_path):
+        step = _run_step(
+            "tests",
+            [sys.executable, "-m", "unittest", "discover", "-s", "tests"],
+            project_path,
+            runner,
         )
+        steps.append(step)
+        test_families.append(("python-unittest", step.status))
     else:
         steps.append(_skipped("tests", "No Python test gate discovered."))
+        test_families.append(("python", "skipped"))
 
-    return PythonPresetResult(steps=tuple(steps))
+    if "unknown" in styles:
+        steps.append(
+            VerificationStep(
+                "tests-discovery",
+                None,
+                "unavailable",
+                None,
+                0,
+                "A candidate test file could not be inspected; test coverage is uncertain.",
+            )
+        )
+        test_families.append(("python-unknown", "unavailable"))
+
+    return PythonPresetResult(steps=tuple(steps), test_families=tuple(test_families))
