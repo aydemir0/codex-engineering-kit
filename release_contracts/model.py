@@ -132,10 +132,12 @@ def _evidence_ref_error(value: str) -> str | None:
 
 
 def _validate_evidence_refs(refs: Iterable[str], label: str, errors: list[str]) -> None:
-    for value in refs:
+    for position, value in enumerate(refs):
         problem = _evidence_ref_error(value)
         if problem:
-            errors.append(f"{label}: {problem}: {value!r}")
+            # Release JSON is repository-controlled data. It may accidentally
+            # contain a token or private path: never echo its raw value to CI.
+            errors.append(f"{label}.evidence[{position}]: {problem} (value omitted)")
 
 
 def validate_release_data(
@@ -147,33 +149,35 @@ def validate_release_data(
     compatibility_rows = tuple(compatibility)
 
     seen_claims: set[str] = set()
-    for claim in claim_rows:
+    for index, claim in enumerate(claim_rows):
+        label = f"claim[{index}]"
         if not claim.id:
-            errors.append("claim id must be non-empty")
+            errors.append(f"{label}: claim id must be non-empty")
         elif claim.id in seen_claims:
-            errors.append(f"duplicate claim id: {claim.id}")
+            errors.append(f"{label}: duplicate claim id")
         seen_claims.add(claim.id)
 
         if claim.state not in CLAIM_STATES:
-            errors.append(f"claim {claim.id}: invalid state {claim.state!r}")
+            errors.append(f"{label}: invalid state (value omitted)")
         if claim.state in {"IMPLEMENTED", "VERIFIED", "LIMITED"} and not claim.implementation_evidence:
-            errors.append(f"claim {claim.id}: {claim.state} requires implementation evidence")
+            errors.append(f"{label}: implementation evidence required")
         if claim.state == "VERIFIED":
             if not claim.runtime_evidence:
-                errors.append(f"claim {claim.id}: VERIFIED requires runtime evidence")
+                errors.append(f"{label}: VERIFIED requires runtime evidence")
             if not claim.runtime_scope:
-                errors.append(f"claim {claim.id}: VERIFIED requires runtime scope")
+                errors.append(f"{label}: VERIFIED requires runtime scope")
         if claim.state == "LIMITED" and not claim.limitation:
-            errors.append(f"claim {claim.id}: LIMITED requires a limitation")
-        _validate_evidence_refs(claim.implementation_evidence, f"claim {claim.id}", errors)
-        _validate_evidence_refs(claim.runtime_evidence, f"claim {claim.id}", errors)
+            errors.append(f"{label}: LIMITED requires a limitation")
+        _validate_evidence_refs(claim.implementation_evidence, f"{label}.implementation", errors)
+        _validate_evidence_refs(claim.runtime_evidence, f"{label}.runtime", errors)
 
     seen_surfaces: set[str] = set()
-    for record in compatibility_rows:
+    for index, record in enumerate(compatibility_rows):
+        label = f"compatibility[{index}]"
         if not record.surface:
-            errors.append("compatibility surface id must be non-empty")
+            errors.append(f"{label}: compatibility surface id must be non-empty")
         elif record.surface in seen_surfaces:
-            errors.append(f"duplicate compatibility surface: {record.surface}")
+            errors.append(f"{label}: duplicate compatibility surface")
         seen_surfaces.add(record.surface)
 
         for runtime_label, result in (
@@ -183,22 +187,13 @@ def validate_release_data(
         ):
             if result is None:
                 continue
+            scope = f"{label}.{runtime_label}"
             if result.status not in COMPATIBILITY_STATES:
-                errors.append(
-                    f"compatibility {record.surface} {runtime_label}: invalid status {result.status!r}"
-                )
+                errors.append(f"{scope}: invalid status (value omitted)")
             if result.status == "PASS" and not result.evidence:
-                errors.append(
-                    f"compatibility {record.surface} {runtime_label}: PASS requires evidence"
-                )
+                errors.append(f"{scope}: PASS requires evidence")
             if result.status in {"FAIL", "BLOCKED"} and not result.limitation:
-                errors.append(
-                    f"compatibility {record.surface} {runtime_label}: {result.status} requires a limitation"
-                )
-            _validate_evidence_refs(
-                result.evidence,
-                f"compatibility {record.surface} {runtime_label}",
-                errors,
-            )
+                errors.append(f"{scope}: limitation required for failure/block")
+            _validate_evidence_refs(result.evidence, scope, errors)
 
     return tuple(errors)
