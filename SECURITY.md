@@ -65,6 +65,16 @@ paths into CI output. Validating intentionally provided local JSON paths is a
 read-only operator-controlled CLI operation, not an authorization boundary
 for arbitrary third-party requests.
 
+The release CLI intentionally supports operator-selected local JSON files. That
+path is **not derived from release JSON fields**, and the CLI does not run with
+more privileges than its invoker. In CI, both approved release inputs are
+bound to two static repository paths using `--ci-contract-files`:
+unexpected operator-supplied paths and symlink/junction escapes fail
+closed before content is read. Invalid inputs yield a fixed diagnostic without
+echoing filenames or JSON content. This bounded input policy is not an
+arbitrary-file sandbox; the non-CI CLI mode still permits an operator to
+select any readable local JSON file explicitly.
+
 ### Bounded `.codex-kit` state
 
 Runtime state under `.codex-kit` is designed to be local, ignored, bounded by schemas, and sensitivity-filtered before shared evidence is produced. State/checkpoint files are not a general transcript store and should not contain raw prompts, credentials, or unbounded tool output.
