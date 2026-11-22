@@ -62,7 +62,9 @@ class BetaDocumentationTests(unittest.TestCase):
                 self.assertNotIn('--sandbox', line)
                 self.assertNotIn('--dangerously', line)
         notes = (ROOT / 'docs/release/v1.1-beta.1.md').read_text(encoding='utf-8')
-        self.assertIn('no model rerun on the beta artifact', notes)
+        self.assertIn('At the time of publication', notes)
+        self.assertIn('model execution on the tagged beta was then `NOT_RUN`', notes)
+        self.assertIn('One separately authenticated, model-driven smoke task', notes)
         self.assertIn('does not close or waive an M4 gate', notes)
         self.assertIn('No baseline or performance advantage', notes)
 

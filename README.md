@@ -10,8 +10,8 @@ CEK is **not an official OpenAI or Anthropic project**. No endorsement is implie
 
 ## Try the Windows beta
 
-Start with the [user quickstart](docs/quickstart.md), [troubleshooting](docs/troubleshooting.md)
-and [beta release notes](docs/release/v1.1-beta.1.md). The verified native configuration uses
+Start with the [user quickstart](docs/quickstart.md), [troubleshooting](docs/troubleshooting.md),
+[beta release notes](docs/release/v1.1-beta.1.md), and [external tester guide](docs/beta-tester-guide.md). The verified native configuration uses
 Windows x64 and the complete official Codex CLI 0.155.1 package. The quickstart requires
 PowerShell 7+, Python 3.11+ and Git.
 Installation and the local integrity demo require no login. A model task requires
@@ -22,8 +22,11 @@ read, a failing test was reproduced, one line was fixed, a distinct native revie
 ran, and a separate process verified the final artifacts and candidate identity.
 This is one small fixture, not a task-success rate or competitive benchmark.
 See the [scoped workflow record](docs/research/evidence/cek-real-workflow-20261106.json).
-That model run used package 1.0.0 on the named main commit. Model execution
-on the published beta artifact remains `NOT_RUN`.
+That earlier run used package 1.0.0 on the named main commit. A separate
+**18 November 2026 post-release smoke** ran one genuine model-driven task on
+the published `v1.1.0-beta.1` tag (commit `e4d9430`), with independent verification:
+[scoped beta smoke record](docs/research/evidence/cek-beta-smoke-20261118.md).
+One tiny task does not establish general reliability, cost advantage or CEK-versus-ECC superiority.
 
 A fresh `CODEX_HOME` still inherited 143 user-global skills and five system skills
 in the observed session, in addition to CEK's eight. It is not complete skill
