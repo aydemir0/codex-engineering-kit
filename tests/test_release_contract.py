@@ -68,6 +68,34 @@ class ReleaseModelTests(unittest.TestCase):
         errors = validate_release_data((claim,), ())
         self.assertTrue(any("repository-relative" in error for error in errors))
 
+    def test_invalid_release_metadata_is_not_echoed_to_ci_logs(self) -> None:
+        fake_token = "sk-" + ("T" * 36)  # Synthetic shape; never a real key.
+        claim = ClaimRecord(
+            id=fake_token,
+            wording="test only",
+            state=fake_token,
+            implementation_evidence=(f"C:/Users/fixture/{fake_token}/secret.txt",),
+            runtime_evidence=(),
+            runtime_scope="",
+            limitation="",
+            public_wording="",
+        )
+        compat = CompatibilityRecord(
+            surface=fake_token,
+            cli_0147=CompatibilityResult(fake_token, (f"../{fake_token}",), ""),
+            desktop_0152=CompatibilityResult("PASS", (), ""),
+        )
+        errors = validate_release_data((claim, claim), (compat, compat))
+        combined = "\n".join(errors)
+        self.assertTrue(errors)
+        self.assertNotIn(fake_token, combined)
+        self.assertNotIn("C:/Users/fixture", combined)
+        self.assertIn("claim[0]", combined)
+        self.assertIn("claim[1]", combined)
+        self.assertIn("compatibility[0]", combined)
+        self.assertIn("compatibility[1]", combined)
+        self.assertIn("value omitted", combined)
+
 
 class ReleaseDocumentationTests(unittest.TestCase):
     def test_current_v1_release_identity_is_consistent(self) -> None:

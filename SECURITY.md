@@ -57,6 +57,14 @@ The public repository must never contain:
 
 Runtime evidence commits only bounded summaries, repository-relative references, and hashes where appropriate. Raw operator artifacts remain local.
 
+Release-contract validation also treats claim IDs, compatibility surface IDs and
+evidence references as untrusted data for diagnostics. Invalid entries are
+reported using bounded row positions and error categories, **not** the raw
+value, so malformed metadata does not echo token-shaped values or private
+paths into CI output. Validating intentionally provided local JSON paths is a
+read-only operator-controlled CLI operation, not an authorization boundary
+for arbitrary third-party requests.
+
 ### Bounded `.codex-kit` state
 
 Runtime state under `.codex-kit` is designed to be local, ignored, bounded by schemas, and sensitivity-filtered before shared evidence is produced. State/checkpoint files are not a general transcript store and should not contain raw prompts, credentials, or unbounded tool output.
