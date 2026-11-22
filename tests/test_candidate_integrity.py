@@ -7,6 +7,7 @@ from unittest.mock import patch
 from verification.candidate import capture_manifest, assert_report_current, CandidateIntegrityError
 from verification.runner import verify_project
 from verification.model import VerificationStep
+from verification.python_project import PythonPresetResult
 
 class CandidateIntegrityTests(unittest.TestCase):
     def setUp(self):
@@ -36,8 +37,10 @@ class CandidateIntegrityTests(unittest.TestCase):
         (self.root/'tests').mkdir();(self.root/'tests/test_x.py').write_text('')
         def discover(root):
             (root/'a.txt').write_bytes(b'changed during tests')
-            from types import SimpleNamespace
-            return SimpleNamespace(steps=(VerificationStep('test',None,'passed',0,0,'ok'),))
+            return PythonPresetResult(
+                steps=(VerificationStep('test',None,'passed',0,0,'ok'),),
+                test_families=(('python-unittest', 'passed'),),
+            )
         with patch('verification.runner.discover_python_steps',side_effect=discover): report=verify_project(self.root)
         self.assertEqual(report.status,'failed')
         with self.assertRaises(CandidateIntegrityError): assert_report_current(self.root,report)
@@ -56,10 +59,14 @@ class CandidateIntegrityTests(unittest.TestCase):
 
     def test_stale_pass_cannot_be_published(self):
         from verification.runner import report_record
-        from types import SimpleNamespace
         (self.root/'tests').mkdir();(self.root/'tests/test_x.py').write_text('')
         step=VerificationStep('test',None,'passed',0,0,'ok')
-        with patch('verification.runner.discover_python_steps',return_value=SimpleNamespace(steps=(step,))):
+        with patch(
+            'verification.runner.discover_python_steps',
+            return_value=PythonPresetResult(
+                steps=(step,), test_families=(('python-unittest', 'passed'),)
+            ),
+        ):
             report=verify_project(self.root)
         self.assertEqual(report.status,'passed')
         (self.root/'a.txt').write_bytes(b'changed after testing')

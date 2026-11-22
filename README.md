@@ -200,7 +200,7 @@ Plugin installation does not register custom agent roles on Codex CLI 0.153.0. P
 
 CEK prefers deterministic evidence when it can be obtained: exit codes, schema checks, tests, repository contracts, and file/state invariants take priority over model confidence.
 
-Verification tooling discovers project-native gates where supported and reports missing evidence as missing/partial rather than converting it to success. The eval layer separates capability and regression checks and prefers deterministic graders before model-assisted judgment.
+Verification tooling discovers project-native gates where supported, records attempted/uncovered test families, and returns `partial` instead of a false GREEN when detected tests are not verified. CI consumers should opt into `--require-complete` to receive exit code 2 for partial verification. See [test-family coverage and limitations](docs/verification/test-coverage.md). The eval layer separates capability and regression checks and prefers deterministic graders before model-assisted judgment.
 
 ## Manual worktree acceptance
 
