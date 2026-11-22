@@ -130,9 +130,9 @@ class ReleaseCliInputBoundaryTests(unittest.TestCase):
     def test_untrusted_absolute_or_relative_cli_paths_are_refused_in_ci(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            outside = root / "private.json"
-            secret = "SYNTHETIC_PRIVATE_CONTENT_NOT_A_TOKEN"
-            outside.write_text(secret, encoding="utf-8")
+            outside = root / "outside.json"
+            sentinel = "EXTERNAL_NONSECRET_FIXTURE_VALUE"
+            outside.write_text(sentinel, encoding="utf-8")
             for candidate in (str(outside), "../other.json", "./release_contracts/claims.json"):
                 with self.subTest(candidate=candidate):
                     result = self._invoke(
@@ -141,7 +141,7 @@ class ReleaseCliInputBoundaryTests(unittest.TestCase):
                     self.assertEqual(result.returncode, 1)
                     self.assertIn("FAIL: release input", result.stdout)
                     self.assertNotIn(str(outside), result.stdout + result.stderr)
-                    self.assertNotIn(secret, result.stdout + result.stderr)
+                    self.assertNotIn(sentinel, result.stdout + result.stderr)
 
     def test_ci_static_paths_cannot_follow_reparse_ancestors_outside_root(self) -> None:
         from unittest.mock import patch
@@ -179,7 +179,7 @@ class ReleaseCliInputBoundaryTests(unittest.TestCase):
             compatibility.write_text('{"compatibility":[]}', encoding="utf-8")
             result = self._invoke(str(claims), str(compatibility), strict=False)
             self.assertEqual(result.returncode, 0, result.stderr)
-            marker = "PRIVATE_MALFORMED_JSON_MARKER"
+            marker = "MALFORMED_INPUT_SENTINEL"
             claims.write_text('{"claims":"unexpected","text":"' + marker + '"}', encoding="utf-8")
             bad = self._invoke(str(claims), str(compatibility), strict=False)
             self.assertEqual(bad.returncode, 1)
