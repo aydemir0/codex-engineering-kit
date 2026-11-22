@@ -87,16 +87,33 @@ Some legitimate paths with special characters may require relocation.
 
 ### Dependency update and scan coverage
 
-Dependabot vulnerability alerts are enabled for this repository. The
-`.github/dependabot.yml` configuration requests reviewed weekly GitHub
-Actions version-update PRs; there is **no automatic merge**. CI workflows
-continue to pin actions to full commit SHAs.
+Dependabot vulnerability alerts and Dependabot security-update PRs are
+enabled for this repository. The `.github/dependabot.yml` configuration
+requests reviewed weekly GitHub Actions version-update PRs; there is **no
+automatic merge**. CI workflows continue to pin actions to full commit SHAs.
 
-GitHub Code Scanning and externally managed Semgrep Cloud checks are
-different security surfaces. A successful external PR check does not imply
-that GitHub has stored code-scanning results or that a local scan has no
-findings. Dependency alerts are not comprehensive for unmanifested or
-externally installed packages, including the separately pinned Codex CLI.
+GitHub CodeQL default setup is configured, but CodeQL, GitHub Code Scanning,
+and externally managed Semgrep Cloud checks are separate evidence surfaces.
+A successful external PR check does not imply that GitHub has stored
+code-scanning results or that a local scan has no findings. Dependency alerts
+are not comprehensive for unmanifested or externally installed packages,
+including the separately pinned Codex CLI.
+
+### Frozen historical benchmark dependency
+
+As of 22 November 2026, GitHub Dependabot reported **41 open alerts**
+(5 critical, 11 high, 21 moderate, 4 low) that all resolve to the
+`next: 15.0.0` declaration in the historical
+`benchmarks/fixtures/frontend-review/package.json`. This is **not an
+installed CEK runtime dependency**, but installing or running that benchmark
+fixture exposes it to those advisories. Do **not** install, serve or deploy
+the fixture on a trusted machine or with valuable credentials. External
+beta testers should use only the published calculator fixture.
+
+The benchmark fixture is pinned to a separate historical source commit.
+Do not alter its version without an explicit new fixture revision and
+separate benchmark protocol/evidence identity. The open alerts have **not**
+been dismissed or represented as remediated.
 
 ### Deterministic evidence vs model judgment
 
