@@ -1,4 +1,4 @@
-# Verification test-family coverage (post-beta proposal)
+# Verification test-family coverage
 
 The verifier's top-level `passed` status is **not** a full test-coverage certificate.
 It certifies the recorded, candidate-bound commands only. Individual test IDs,
@@ -20,12 +20,21 @@ subprocess sandboxing, and external services remain outside this contract.
   If only pytest-style tests exist without pytest, no passing gate is claimed.
   A unittest run collecting **zero tests** also becomes `unavailable`.
   Unreadable or syntactically invalid candidate test files prevent a full GREEN.
-- **Node + Python markers:** Run the Node preset and explicitly record
-  `tests-python: unavailable` / `{family:"python",status:"not-run"}`.
-  No overall `passed` is permitted until another explicit verification
-  checks Python. The first PR does not silently execute every language's
-  build scripts in a mixed repository.
+- **Node + Python markers in the same project root.** Run the Node preset and
+  the discovered Python tests, even if the Node tests fail. Python steps get a
+  `-python` suffix in the report and publish their own test families. Both
+  families must pass for an overall `passed`. A failed suite produces
+  `failed`, while a missing test gate or required test runner produces
+  `partial` when the attempted checks pass. The report retains
+  `projectType: "node"` and the selected Node package manager. Run separate
+  verification commands for independently configured project roots. The
+  mixed mode runs Python tests only and uses the invoking Python interpreter.
 - **Generic/unsupported:** `partial`.
+
+Python test commands use a fresh temporary bytecode cache path and disable
+bytecode writes. Existing project bytecode caches are preserved. This keeps
+an old timestamp-based cache from substituting stale Python code for the
+candidate being verified.
 
 The `steps` array retains exact attempted commands, exit codes and bounded
 evidence; the additive `testFamilies` array enumerates detected families
@@ -53,6 +62,6 @@ to match a project's virtualenv. A package `test` script returning zero
 does not prove it ran a nonzero number of individual cases. The report
 does not claim percentage or statement coverage.
 
-This proposal is post-beta: the frozen published `v1.1.0-beta.1` tag does
+These changes are post-beta: the frozen published `v1.1.0-beta.1` tag does
 **not** receive these changes. The artifact remains bound to candidate-file
 manifest/digest checks; no model run or benchmark inference is added.

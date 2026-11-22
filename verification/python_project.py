@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import os
 import re
 import sys
+import tempfile
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -46,6 +48,13 @@ def _process_evidence(result: ProcessResult) -> str:
     if result.stdout_tail:
         return result.stdout_tail
     return "Command completed without output."
+
+
+def _run_python_tests(command: list[str], project_path: Path) -> ProcessResult:
+    # -B alone blocks writing bytecode but still allows reading old caches.
+    with tempfile.TemporaryDirectory(prefix="cek-test-bytecode-") as cache:
+        env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", PYTHONPYCACHEPREFIX=cache)
+        return run_command(command, project_path, env=env)
 
 
 def _run_step(name: str, command: list[str], project_path: Path, runner) -> VerificationStep:
@@ -173,16 +182,17 @@ def _mypy_configured(project_path: Path, pyproject: dict) -> bool:
 def discover_python_steps(
     project_path: Path,
     module_available: Callable[[str], bool] = _default_module_available,
-    runner=run_command,
+    runner: Callable[[list[str], Path], ProcessResult] | None = None,
 ) -> PythonPresetResult:
     project_path = Path(project_path)
     pyproject = _read_pyproject(project_path)
     steps: list[VerificationStep] = []
+    gate_runner = run_command if runner is None else runner
 
     if isinstance(pyproject.get("build-system"), dict):
         command = [sys.executable, "-m", "build"]
         if module_available("build"):
-            steps.append(_run_step("build", command, project_path, runner))
+            steps.append(_run_step("build", command, project_path, gate_runner))
         else:
             steps.append(_unavailable("build", command, "build"))
     else:
@@ -194,7 +204,7 @@ def discover_python_steps(
                 "typecheck",
                 [sys.executable, "-m", "mypy", "."],
                 project_path,
-                runner,
+                gate_runner,
             )
         )
     else:
@@ -211,12 +221,27 @@ def discover_python_steps(
                 "lint",
                 [sys.executable, "-m", "ruff", "check", "."],
                 project_path,
-                runner,
+                gate_runner,
             )
         )
     else:
         steps.append(_skipped("lint", "No runnable Ruff configuration discovered."))
 
+    tests = discover_python_test_steps(project_path, module_available, runner, pyproject=pyproject)
+    return PythonPresetResult(steps=tuple(steps) + tests.steps, test_families=tests.test_families)
+
+
+def discover_python_test_steps(
+    project_path: Path,
+    module_available: Callable[[str], bool] = _default_module_available,
+    runner: Callable[[list[str], Path], ProcessResult] | None = None,
+    *,
+    pyproject: dict | None = None,
+) -> PythonPresetResult:
+    if pyproject is None:
+        pyproject = _read_pyproject(project_path)
+    runner = _run_python_tests if runner is None else runner
+    steps: list[VerificationStep] = []
     styles = _test_styles(project_path)
     wants_pytest = _has_pytest_marker(project_path, pyproject) or "pytest" in styles
     has_unittest = "unittest" in styles or (_has_unittest_tree(project_path) and not wants_pytest)

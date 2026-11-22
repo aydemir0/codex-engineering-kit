@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import json
+import os
+import py_compile
 import shutil
 import subprocess
 import sys
@@ -65,42 +67,90 @@ class CoverageContractTests(unittest.TestCase):
         self.assertEqual(next(s for s in result.steps if s.name == "tests").status, "unavailable")
         self.assertFalse(called, "Do not claim unittest success over a pytest-only file")
 
-    @unittest.skipUnless(shutil.which("node") and shutil.which("npm"), "Node/npm unavailable")
-    def test_mixed_node_and_failing_python_unittest_is_partial(self) -> None:
+    def add_mixed_contract_fixture(self, node_expected: int, python_expected: int) -> Path:
         (self.root / "package.json").write_text(
             json.dumps({"name": "cek-coverage-fixture", "private": True,
                         "packageManager": "npm@10.0.0",
-                        "scripts": {"test": "node -e \"process.exit(0)\""}}),
+                        "scripts": {"test": "node check-contract.js"}}),
             encoding="utf-8",
         )
+        (self.root / "check-contract.js").write_text(
+            "const assert = require('node:assert/strict');\n"
+            f"assert.equal(require('./contract.json').version, {node_expected});\n",
+            encoding="utf-8",
+        )
+        (self.root / "contract.json").write_text('{"version": 2}\n', encoding="utf-8")
         self.add_test_file(
-            "test_math.py",
-            "import unittest\nclass Bad(unittest.TestCase):\n"
-            "    def test_total(self): self.assertEqual(2 + 2, 5)\n",
+            "test_contract.py",
+            "import json\nimport unittest\nfrom pathlib import Path\n"
+            "class ContractTests(unittest.TestCase):\n"
+            "    def test_version(self):\n"
+            "        contract = Path(__file__).resolve().parents[1] / 'contract.json'\n"
+            f"        self.assertEqual(json.loads(contract.read_text())['version'], {python_expected})\n",
+        )
+        sentinel = self.root / "foreign.txt"
+        sentinel.write_bytes(b"preserve this file\n")
+        return sentinel
+
+    @unittest.skipUnless(shutil.which("node") and shutil.which("npm"), "Node/npm unavailable")
+    def test_mixed_contract_requires_both_real_suites(self) -> None:
+        for node_expected, python_expected, expected_status in (
+            (2, 2, "passed"),
+            (2, 1, "failed"),
+            (1, 2, "failed"),
+        ):
+            with self.subTest(node_expected=node_expected, python_expected=python_expected):
+                sentinel = self.add_mixed_contract_fixture(node_expected, python_expected)
+                report = verify_project(self.root)
+                self.assertEqual(report.project_type, "node")
+                self.assertEqual(report.status, expected_status)
+                families = {
+                    "node": "passed" if node_expected == 2 else "failed",
+                    "python-unittest": "passed" if python_expected == 2 else "failed",
+                }
+                self.assertEqual(dict(report.test_families), families)
+                artifact = json.loads(
+                    (self.root / ".codex-kit" / "verification" / "latest.json").read_text(encoding="utf-8")
+                )
+                self.assertEqual({row["family"]: row["status"] for row in artifact["testFamilies"]}, families)
+                steps = {step.name: step for step in report.steps}
+                self.assertEqual(len(steps), len(report.steps))
+                self.assertEqual(steps["tests"].status, families["node"])
+                self.assertEqual(steps["tests-python"].status, families["python-unittest"])
+                self.assertIn("Ran 1 test", steps["tests-python"].evidence)
+                self.assertEqual(sentinel.read_bytes(), b"preserve this file\n")
+
+    @unittest.skipUnless(shutil.which("node") and shutil.which("npm"), "Node/npm unavailable")
+    def test_mixed_contract_without_python_tests_stays_partial(self) -> None:
+        self.add_mixed_contract_fixture(2, 2)
+        (self.root / "tests" / "test_contract.py").unlink()
+        (self.root / "pyproject.toml").write_text(
+            "[build-system]\nrequires = []\nbuild-backend = 'example'\n", encoding="utf-8"
         )
         report = verify_project(self.root)
-        self.assertEqual(report.project_type, "node")
         self.assertEqual(report.status, "partial")
-        self.assertEqual(dict(report.test_families), {"node": "passed", "python": "not-run"})
-        artifact = json.loads(
-            (self.root / ".codex-kit" / "verification" / "latest.json").read_text(encoding="utf-8")
-        )
-        self.assertEqual(
-            artifact["testFamilies"],
-            [
-                {"family": "node", "status": "passed"},
-                {"family": "python", "status": "not-run"},
-            ],
-        )
-        self.assertEqual(
-            next(s for s in report.steps if s.name == "tests-python").status,
-            "unavailable",
-        )
-        oracle = subprocess.run(
-            [sys.executable, "-B", "-m", "unittest", "discover", "-s", "tests"],
-            cwd=self.root, capture_output=True, text=True, timeout=15,
-        )
-        self.assertNotEqual(oracle.returncode, 0)
+        self.assertEqual(dict(report.test_families), {"node": "passed", "python": "skipped"})
+        self.assertFalse(any(step.name == "build-python" for step in report.steps))
+
+    @unittest.skipUnless(shutil.which("node") and shutil.which("npm"), "Node/npm unavailable")
+    def test_mixed_contract_runs_source_when_timestamp_bytecode_is_stale(self) -> None:
+        self.add_mixed_contract_fixture(2, 2)
+        source = self.root / "tests" / "test_contract.py"
+        original = source.stat()
+        cached = Path(py_compile.compile(
+            str(source), doraise=True,
+            invalidation_mode=py_compile.PycInvalidationMode.TIMESTAMP,
+        ))
+        cache_bytes = cached.read_bytes()
+        self.add_mixed_contract_fixture(2, 1)
+        os.utime(source, ns=(original.st_atime_ns, original.st_mtime_ns))
+        self.assertEqual(source.stat().st_size, original.st_size)
+
+        report = verify_project(self.root)
+
+        self.assertEqual(report.status, "failed")
+        self.assertEqual(dict(report.test_families), {"node": "passed", "python-unittest": "failed"})
+        self.assertEqual(cached.read_bytes(), cache_bytes)
 
     @unittest.skipUnless(shutil.which("pnpm") and shutil.which("node"), "pnpm/node unavailable")
     def test_pnpm_script_matches_direct_invocation(self) -> None:
