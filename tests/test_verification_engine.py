@@ -84,9 +84,9 @@ class VerificationNodeTests(unittest.TestCase):
         self.assertEqual(
             seen,
             [
-                ["npm", "run", "build", "--silent"],
-                ["npm", "run", "type-check", "--silent"],
-                ["npm", "run", "test", "--silent"],
+                ["npm", "run", "build"],
+                ["npm", "run", "type-check"],
+                ["npm", "run", "test"],
             ],
         )
         self.assertTrue(all(step.duration_ms >= 0 for step in result.steps))
@@ -113,11 +113,11 @@ class VerificationNodeTests(unittest.TestCase):
             runner=runner,
         )
 
-        self.assertIn(["npm", "run", "typecheck", "--silent"], seen)
-        self.assertNotIn(["npm", "run", "type-check", "--silent"], seen)
-        self.assertNotIn(["npm", "run", "check-types", "--silent"], seen)
-        self.assertIn(["npm", "run", "test", "--silent"], seen)
-        self.assertNotIn(["npm", "run", "tests", "--silent"], seen)
+        self.assertIn(["npm", "run", "typecheck"], seen)
+        self.assertNotIn(["npm", "run", "type-check"], seen)
+        self.assertNotIn(["npm", "run", "check-types"], seen)
+        self.assertIn(["npm", "run", "test"], seen)
+        self.assertNotIn(["npm", "run", "tests"], seen)
 
     def test_authoritative_missing_manager_marks_discovered_gate_unavailable(self) -> None:
         self.write_package(
@@ -142,7 +142,7 @@ class VerificationNodeTests(unittest.TestCase):
         self.assertEqual(result.package_manager, "yarn")
         self.assertEqual(result.manager_detail, "unavailable")
         self.assertEqual(by_name["tests"].status, "unavailable")
-        self.assertEqual(by_name["tests"].command, ["yarn", "run", "test", "--silent"])
+        self.assertEqual(by_name["tests"].command, ["yarn", "run", "test"])
         self.assertIsNone(by_name["tests"].exit_code)
         self.assertEqual(by_name["build"].status, "skipped")
 

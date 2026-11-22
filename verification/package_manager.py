@@ -95,6 +95,6 @@ def package_script_command(manager: str, script: str) -> list[str]:
     normalized = manager.casefold()
     if normalized not in SUPPORTED_MANAGERS:
         raise ValueError(f"unsupported package manager: {manager}")
-    if normalized == "bun":
-        return ["bun", "run", script]
-    return [normalized, "run", script, "--silent"]
+    # Preserve the exact package-script invocation. Some managers forward an
+    # appended --silent to the script itself (notably pnpm with node -e).
+    return [normalized, "run", script]

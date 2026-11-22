@@ -148,6 +148,13 @@ python scripts/cek_lifecycle.py verify --project <project-root> --codex-home <is
 
 The install command preflights the approved runtime/host pair, registers the repository-local marketplace when needed, installs the native plugin into the selected `CODEX_HOME`, verifies the cached `.codex-plugin/plugin.json`, eight plugin-native skills, and `hooks/hooks.json`, and provisions `.codex/agents/reviewer.toml` into the project. It writes two ownership manifests: `$CODEX_HOME/codex-engineering-kit.install.json` for the managed plugin and `<project>/.codex/codex-engineering-kit.install.json` for the managed reviewer.
 
+**Post-beta source only:** Managed lifecycle subprocesses have a bounded
+120-second default timeout, configurable using `--codex-timeout-seconds`.
+A timeout reports the precise phase, preserves existing ownership manifests
+and does not blindly roll back a possibly partial native CLI operation.
+See [timeout handling and recovery](docs/install.md#bounded-codex-lifecycle-operations-post-beta-source-only).
+The frozen `v1.1.0-beta.1` tag does **not** contain this update.
+
 The 0.147.0/0.153.0 tables and release evidence retain their historical,
 feature-specific scope. They do not establish behavior on 0.155.1. The separately recorded one-task run
 establishes only its named workflow and reviewer behavior. See [current runtime boundaries](docs/verification/runtime-compatibility.md).
@@ -200,7 +207,7 @@ Plugin installation does not register custom agent roles on Codex CLI 0.153.0. P
 
 CEK prefers deterministic evidence when it can be obtained: exit codes, schema checks, tests, repository contracts, and file/state invariants take priority over model confidence.
 
-Verification tooling discovers project-native gates where supported and reports missing evidence as missing/partial rather than converting it to success. The eval layer separates capability and regression checks and prefers deterministic graders before model-assisted judgment.
+Verification tooling discovers project-native gates where supported, records attempted/uncovered test families, and returns `partial` instead of a false GREEN when detected tests are not verified. CI consumers should opt into `--require-complete` to receive exit code 2 for partial verification. See [test-family coverage and limitations](docs/verification/test-coverage.md). The eval layer separates capability and regression checks and prefers deterministic graders before model-assisted judgment.
 
 ## Manual worktree acceptance
 

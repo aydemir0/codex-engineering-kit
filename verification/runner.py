@@ -26,7 +26,18 @@ def _has_python_markers(project_path: Path) -> bool:
     if any((project_path / marker).is_file() for marker in PYTHON_MARKERS):
         return True
     tests_dir = project_path / "tests"
-    return tests_dir.is_dir() and any(path.is_file() for path in tests_dir.rglob("test*.py"))
+    return (
+        (
+            tests_dir.is_dir()
+            and any(
+                path.is_file()
+                for pattern in ("test*.py", "*_test.py")
+                for path in tests_dir.rglob(pattern)
+            )
+        )
+        or any(project_path.glob("test_*.py"))
+        or any(project_path.glob("*_test.py"))
+    )
 
 
 def _bounded_evidence(text: str, max_bytes: int = 8192) -> str:
@@ -58,6 +69,10 @@ def report_record(report: VerificationReport) -> dict:
         "projectPath": report.project_path,
         "packageManager": report.package_manager,
         "steps": [_step_payload(step) for step in report.steps],
+        "testFamilies": [
+            {"family": family, "status": status}
+            for family, status in report.test_families
+        ],
         "status": report.status,
         "candidateDigest": report.candidate_digest,
         "candidateManifest": list(report.candidate_manifest),
@@ -70,12 +85,23 @@ def write_report(path: Path, report: VerificationReport) -> None:
     write_state(Path(path), REPORT_KIND, payload)
 
 
-def _report_status(project_type: str, project_steps: tuple[VerificationStep, ...], steps: tuple[VerificationStep, ...]) -> str:
+def _report_status(
+    project_type: str,
+    project_steps: tuple[VerificationStep, ...],
+    steps: tuple[VerificationStep, ...],
+    test_families: tuple[tuple[str, str], ...],
+) -> str:
     if any(step.status == "failed" for step in steps):
         return "failed"
     if any(step.status == "unavailable" for step in steps):
         return "partial"
     if project_type == "generic":
+        return "partial"
+    if (
+        not test_families
+        or not any(status == "passed" for _, status in test_families)
+        or any(status in {"skipped", "unavailable", "not-run"} for _, status in test_families)
+    ):
         return "partial"
     if not any(step.status == "passed" for step in project_steps):
         return "partial"
@@ -94,6 +120,7 @@ def verify_project(
 
     before = capture_manifest(project_path)
     package_manager: str | None = None
+    test_families: tuple[tuple[str, str], ...] = ()
     if (project_path / "package.json").is_file():
         project_type = "node"
         preset = discover_node_steps(
@@ -102,10 +129,26 @@ def verify_project(
         )
         package_manager = preset.package_manager
         project_steps = preset.steps
+        node_test = next((step for step in project_steps if step.name == "tests"), None)
+        test_families = (("node", node_test.status if node_test else "skipped"),)
+        if _has_python_markers(project_path):
+            # Never infer that Node success covers a Python test tree.
+            project_steps += (
+                VerificationStep(
+                    "tests-python",
+                    None,
+                    "unavailable",
+                    None,
+                    0,
+                    "Python project/test markers discovered, but the Node preset did not run Python tests. Verify Python separately.",
+                ),
+            )
+            test_families += (("python", "not-run"),)
     elif _has_python_markers(project_path):
         project_type = "python"
         preset = discover_python_steps(project_path)
         project_steps = preset.steps
+        test_families = preset.test_families
     else:
         project_type = "generic"
         project_steps = ()
@@ -129,7 +172,8 @@ def verify_project(
         project_path=str(project_path),
         package_manager=package_manager,
         steps=steps,
-        status=_report_status(project_type, tuple(project_steps), steps),
+        status=_report_status(project_type, tuple(project_steps), steps, test_families),
+        test_families=test_families,
     )
     write_report(project_path / DEFAULT_REPORT_RELATIVE_PATH, report)
     return report

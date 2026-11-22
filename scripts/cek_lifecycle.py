@@ -3,9 +3,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -24,6 +26,8 @@ GLOBAL_STATE_NAME = "codex-engineering-kit.install.json"
 PROJECT_STATE = Path(".codex/codex-engineering-kit.install.json")
 SCHEMA_VERSION = 1
 PACKAGED_FIXED_ASSETS = (Path(".codex-plugin/plugin.json"), Path("hooks/hooks.json"))
+DEFAULT_CODEX_TIMEOUT_SECONDS = 120.0
+MAX_CODEX_TIMEOUT_SECONDS = 900.0
 
 CommandResult = dict[str, object]
 Runner = Callable[[list[str], dict[str, str]], CommandResult]
@@ -31,6 +35,10 @@ Runner = Callable[[list[str], dict[str, str]], CommandResult]
 
 class LifecycleError(RuntimeError):
     pass
+
+
+class LifecycleTimeoutError(LifecycleError):
+    """A native command may have partially mutated state before timing out."""
 
 
 def _sha256(path: Path) -> str:
@@ -134,24 +142,130 @@ def _environment(codex_home: Path) -> dict[str, str]:
     return env
 
 
-def run_codex(executable: str, args: Sequence[str], env: Mapping[str, str]) -> CommandResult:
+def _codex_phase(args: Sequence[str]) -> str:
+    """Report a bounded, static phase label without leaking command arguments."""
+    if tuple(args) == ("--version",):
+        return "runtime version"
+    if len(args) >= 3 and tuple(args[:2]) == ("plugin", "marketplace"):
+        return f"marketplace {args[2]}" if args[2] in {"list", "add", "remove"} else "marketplace command"
+    if len(args) >= 2 and args[0] == "plugin":
+        return f"plugin {args[1]}" if args[1] in {"list", "add", "remove"} else "plugin command"
+    return "Codex command"
+
+
+def _validated_timeout(seconds: float) -> float:
+    if not math.isfinite(seconds) or not 0 < seconds <= MAX_CODEX_TIMEOUT_SECONDS:
+        raise LifecycleError(
+            f"Codex CLI timeout must be greater than zero and at most {MAX_CODEX_TIMEOUT_SECONDS:g} seconds"
+        )
+    return seconds
+
+
+def _windows_taskkill() -> str | None:
+    """Resolve taskkill using Windows' system directory, never caller-controlled PATH."""
+    if os.name != "nt":
+        return None
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    get_system_directory = kernel32.GetSystemDirectoryW
+    get_system_directory.argtypes = [wintypes.LPWSTR, wintypes.UINT]
+    get_system_directory.restype = wintypes.UINT
+    buffer = ctypes.create_unicode_buffer(32768)
+    length = get_system_directory(buffer, len(buffer))
+    if not (0 < length < len(buffer)):
+        return None
+    tool = Path(buffer.value) / "taskkill.exe"
+    return str(tool) if tool.is_file() else None
+
+
+def _stop_codex_tree(process: subprocess.Popen[str]) -> None:
+    """Best-effort bounded cleanup; never leave the parent waiting indefinitely."""
+    if process.poll() is None:
+        if os.name == "nt":
+            tool = _windows_taskkill()
+            if tool is not None:
+                try:
+                    subprocess.run(
+                        [tool, "/T", "/F", "/PID", str(process.pid)],
+                        stdin=subprocess.DEVNULL,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        timeout=5,
+                        check=False,
+                    )
+                except (OSError, subprocess.TimeoutExpired):
+                    pass
+        else:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            except OSError:
+                pass
+        if process.poll() is None:
+            try:
+                process.kill()
+            except OSError:
+                pass
+    try:
+        process.communicate(timeout=3)
+    except (subprocess.TimeoutExpired, OSError):
+        for stream in (process.stdout, process.stderr):
+            if stream is not None:
+                stream.close()
+        try:
+            process.wait(timeout=2)
+        except (subprocess.TimeoutExpired, OSError):
+            pass
+
+
+def run_codex(
+    executable: str,
+    args: Sequence[str],
+    env: Mapping[str, str],
+    timeout_seconds: float = DEFAULT_CODEX_TIMEOUT_SECONDS,
+) -> CommandResult:
+    """Execute one bounded native Codex CLI operation and record its exact phase."""
+    timeout = _validated_timeout(float(timeout_seconds))
     resolved = shutil.which(executable, path=env.get("PATH"))
     command = [resolved or executable, *args]
+    process: subprocess.Popen[str] | None = None
     try:
-        completed = subprocess.run(
+        process = subprocess.Popen(
             command,
             env=dict(env),
-            capture_output=True,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             shell=False,
-            check=False,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0,
+            start_new_session=os.name != "nt",
         )
+        stdout, stderr = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        if process is not None:
+            _stop_codex_tree(process)
+        phase = _codex_phase(list(args))
+        raise LifecycleTimeoutError(
+            f"CODEX_CLI_TIMEOUT: phase={phase}; limit={timeout:g}s. "
+            "Codex command did not finish; lifecycle success was not claimed. "
+            "Existing managed-state manifests were not deleted by timeout handling. "
+            "The CLI may have partially changed plugin state; inspect the isolated CODEX_HOME "
+            "and retry verify once the CLI is responsive. Do not reinstall or clean up blindly."
+        ) from None
     except OSError as exc:
-        raise LifecycleError(f"Codex executable could not be started: {executable}") from exc
+        if process is not None:
+            _stop_codex_tree(process)
+        raise LifecycleError("Codex executable could not be started or read") from exc
     return {
-        "returncode": completed.returncode,
-        "stdout": completed.stdout.strip(),
-        "stderr": completed.stderr.strip(),
+        "returncode": process.returncode,
+        "stdout": stdout.strip(),
+        "stderr": stderr.strip(),
     }
 
 
@@ -363,23 +477,27 @@ def install(repo: Path, project: Path, codex_home: Path, run: Runner) -> dict[st
         )
         _atomic_json(project_path, project_payload)
         _atomic_json(global_path, global_payload)
-    except Exception:
+    except Exception as exc:
         if target.exists() and _sha256(target) == _sha256(repo / PROJECT_ASSET):
             target.unlink()
         if project_path.exists():
             project_path.unlink()
         if global_path.exists():
             global_path.unlink()
-        if plugin_added:
-            try:
-                _checked(run, ["plugin", "remove", f"{name}@{marketplace}", "--json"], env, "rollback plugin remove")
-            except LifecycleError:
-                pass
-        if marketplace_added:
-            try:
-                _checked(run, ["plugin", "marketplace", "remove", marketplace, "--json"], env, "rollback marketplace remove")
-            except LifecycleError:
-                pass
+        # The CLI could have changed native plugin state before a timeout.
+        # Never issue a second, potentially destructive CLI mutation in this
+        # uncertain state; preserve the marketplace for an operator to inspect.
+        if not isinstance(exc, LifecycleTimeoutError):
+            if plugin_added:
+                try:
+                    _checked(run, ["plugin", "remove", f"{name}@{marketplace}", "--json"], env, "rollback plugin remove")
+                except LifecycleError:
+                    pass
+            if marketplace_added:
+                try:
+                    _checked(run, ["plugin", "marketplace", "remove", marketplace, "--json"], env, "rollback marketplace remove")
+                except LifecycleError:
+                    pass
         raise
     return {"status": "installed", "pluginVersion": version, "projectAsset": PROJECT_ASSET.as_posix()}
 
@@ -543,6 +661,17 @@ def verify_clean(repo: Path, project: Path, codex_home: Path, run: Runner) -> di
     }
 
 
+def _cli_codex_timeout(value: str) -> float:
+    try:
+        seconds = float(value)
+        _validated_timeout(seconds)
+    except (ValueError, LifecycleError) as exc:
+        raise argparse.ArgumentTypeError(
+            f"timeout must be > 0 and <= {MAX_CODEX_TIMEOUT_SECONDS:g} seconds"
+        ) from exc
+    return seconds
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Manage the CEK native plugin and project-local reviewer lifecycle.")
     parser.add_argument("action", choices=("install", "verify", "update", "uninstall", "verify-clean"))
@@ -550,12 +679,21 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--project", required=True)
     parser.add_argument("--codex-home", default=os.environ.get("CODEX_HOME", str(Path.home() / ".codex")))
     parser.add_argument("--codex", default="codex")
+    parser.add_argument(
+        "--codex-timeout-seconds",
+        type=_cli_codex_timeout,
+        default=DEFAULT_CODEX_TIMEOUT_SECONDS,
+        metavar="SECONDS",
+        help="Per Codex CLI subprocess timeout (default: 120s, maximum: 900s).",
+    )
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
-    runner: Runner = lambda command, env: run_codex(args.codex, command, env)
+    runner: Runner = lambda command, env: run_codex(
+        args.codex, command, env, timeout_seconds=args.codex_timeout_seconds
+    )
     actions = {
         "install": install,
         "verify": verify,

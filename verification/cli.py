@@ -14,6 +14,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--project", required=True, help="Project directory to verify.")
     parser.add_argument("--package-manager", choices=SUPPORTED_MANAGERS)
     parser.add_argument("--json", action="store_true", dest="json_output")
+    parser.add_argument(
+        "--require-complete",
+        action="store_true",
+        help="Exit nonzero (2) when test coverage is partial or unsupported.",
+    )
     parser.add_argument("--output", help="Optional additional verification artifact path.")
     return parser
 
@@ -36,7 +41,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{step.name.upper():10} {step.status}")
         print(f"STATUS     {report.status}")
 
-    return 1 if report.status == "failed" else 0
+    if report.status == "failed":
+        return 1
+    if report.status == "partial" and args.require_complete:
+        return 2
+    return 0
 
 
 if __name__ == "__main__":
