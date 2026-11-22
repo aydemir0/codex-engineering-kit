@@ -61,6 +61,17 @@ Runtime evidence commits only bounded summaries, repository-relative references,
 
 Runtime state under `.codex-kit` is designed to be local, ignored, bounded by schemas, and sensitivity-filtered before shared evidence is produced. State/checkpoint files are not a general transcript store and should not contain raw prompts, credentials, or unbounded tool output.
 
+The production hook entrypoint treats JSON `cwd` as untrusted. Before any
+state write, it requires an absolute workspace path, refuses traversal and
+symlink/junction/reparse components, and binds the payload to the hook
+process's actual working directory. A mismatch fails closed; the path from
+JSON is replaced with the verified host workspace for subsequent operations.
+Direct in-process `dispatch()` is an internal testable unit, **not** an
+untrusted public entrypoint; external callers must use the validated hook
+command. Runtime configurations where the host launches hooks in a different
+working directory may now fail closed and require host integration fixes.
+This check does not eliminate filesystem races or replace OS sandboxing.
+
 ### Trusted skills vs learned candidates
 
 Continuous learning produces `pending_review` candidates only. Candidates are not automatically installed, promoted, or executed. Learned shell content is never an automatic execution source.
