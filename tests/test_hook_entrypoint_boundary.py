@@ -122,10 +122,16 @@ class HookEntrypointBoundaryTests(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
             else:
                 alias.symlink_to(host, target_is_directory=True)
-            code, stdout, stderr = invoke_hook(host, str(alias))
+            code, stdout, stderr = invoke_hook(alias, str(alias))
             self.assertEqual(code, 1)
             self.assertEqual(stdout, "")
             self.assertIn("unsafe state path", stderr)
+            self.assertFalse((host / ".codex-kit").exists())
+
+            code, stdout, stderr = invoke_hook(host, str(alias))
+            self.assertEqual(code, 1)
+            self.assertEqual(stdout, "")
+            self.assertIn("does not match", stderr)
             self.assertFalse((host / ".codex-kit").exists())
 
 

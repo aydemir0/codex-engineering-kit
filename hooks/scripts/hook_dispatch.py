@@ -260,17 +260,20 @@ def _validate_host_workspace(payload: dict[str, Any]) -> Path:
     candidate = _workspace_dir(payload)
     if not candidate.is_absolute() or ".." in candidate.parts:
         raise ValueError("hook workspace must be an absolute, normalized path")
-    # Check the complete caller-supplied path, not just CEK-owned descendants.
-    # A junction or symlink in any component is not a supported trust anchor.
-    for component in (candidate, *candidate.parents):
-        reject_unsafe_state_path(component)
-    if not candidate.is_dir():
-        raise ValueError("hook workspace directory is unavailable")
+    # Compare the untrusted string with the host working directory *before*
+    # doing any filesystem operation. Avoid resolving or stat-ing the JSON
+    # path; it is never allowed to choose a filesystem target.
     trusted = Path.cwd()
-    if os.path.normcase(str(candidate.resolve(strict=True))) != os.path.normcase(
-        str(trusted.resolve(strict=True))
+    if os.path.normcase(os.path.normpath(str(candidate))) != os.path.normcase(
+        os.path.normpath(str(trusted))
     ):
         raise ValueError("hook cwd does not match host process cwd")
+    # Only inspect the independently obtained host path and its ancestors.
+    # A reparse/symlink component cannot redirect our local state.
+    for component in (trusted, *trusted.parents):
+        reject_unsafe_state_path(component)
+    if not trusted.is_dir():
+        raise ValueError("hook workspace directory is unavailable")
     return trusted
 
 
