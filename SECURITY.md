@@ -68,8 +68,8 @@ for arbitrary third-party requests.
 The release CLI intentionally supports operator-selected local JSON files. That
 path is **not derived from release JSON fields**, and the CLI does not run with
 more privileges than its invoker. In CI, both approved release inputs are
-additionally checked against the repository root using `--input-root .`:
-absolute outsiders, parent traversal and symlink/junction escapes fail
+bound to two static repository paths using `--ci-contract-files`:
+unexpected operator-supplied paths and symlink/junction escapes fail
 closed before content is read. Invalid inputs yield a fixed diagnostic without
 echoing filenames or JSON content. This bounded input policy is not an
 arbitrary-file sandbox; the non-CI CLI mode still permits an operator to

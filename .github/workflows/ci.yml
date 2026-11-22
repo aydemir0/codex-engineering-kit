@@ -27,7 +27,7 @@ jobs:
       - name: Validate benchmark protocol
         run: python -m benchmarks.cli validate --cases benchmarks/cases --configurations benchmarks/configurations
       - name: Validate release contracts
-        run: python -m release_contracts.cli validate --claims release_contracts/claims.json --compatibility release_contracts/compatibility.json --input-root .
+        run: python -m release_contracts.cli validate --claims release_contracts/claims.json --compatibility release_contracts/compatibility.json --ci-contract-files
 
   content-contracts:
     runs-on: ubuntu-latest
@@ -206,4 +206,4 @@ jobs:
       - name: Repository content contracts
         run: python tests/validate_content.py
       - name: Offline release data validation
-        run: python -m release_contracts.cli validate --claims release_contracts/claims.json --compatibility release_contracts/compatibility.json --input-root .
+        run: python -m release_contracts.cli validate --claims release_contracts/claims.json --compatibility release_contracts/compatibility.json --ci-contract-files
