@@ -146,6 +146,41 @@ class LifecycleTimeoutTests(unittest.TestCase):
         self.assertNotIn(str(self.root), str(caught.exception))
         self.assertNotIn(secret, str(caught.exception))
 
+    def test_timeout_returns_when_a_surviving_child_keeps_output_open(self) -> None:
+        ready = self.root / "child-started"
+        child = f"from pathlib import Path; import time; Path({str(ready)!r}).touch(); time.sleep(6)"
+        parent = (
+            "import subprocess, sys, time\n"
+            f"subprocess.Popen([sys.executable, '-c', {child!r}])\n"
+            "time.sleep(6)\n"
+        )
+        if os.name == "nt":
+            cleanup_denied = patch("scripts.cek_lifecycle._windows_taskkill", return_value=None)
+        else:
+            cleanup_denied = patch("scripts.cek_lifecycle.os.killpg", side_effect=PermissionError)
+
+        start = time.monotonic()
+        with cleanup_denied, self.assertRaisesRegex(LifecycleError, "CODEX_CLI_TIMEOUT"):
+            run_codex(sys.executable, ["-c", parent], os.environ, timeout_seconds=0.8)
+        elapsed = time.monotonic() - start
+
+        self.assertTrue(ready.exists(), "the descendant must have inherited the output handles")
+        self.assertLess(elapsed, 3, "cleanup must not wait for a descendant to close its output")
+
+    def test_run_codex_preserves_exit_code_and_utf8_output(self) -> None:
+        script = (
+            "import sys; "
+            "sys.stdout.buffer.write(b'caf\\xc3\\xa9\\r\\nsecond line\\r\\n'); "
+            "sys.stderr.buffer.write(b'diagnostic\\r\\n'); "
+            "sys.exit(7)"
+        )
+        result = run_codex(sys.executable, ["-c", script], os.environ)
+        self.assertEqual(result, {
+            "returncode": 7,
+            "stdout": "caf\u00e9\nsecond line",
+            "stderr": "diagnostic",
+        })
+
     def test_verify_plugin_list_timeout_preserves_managed_and_user_state(self) -> None:
         codex = FakeCodex()
         project_user = self.project / "user-owned.txt"
