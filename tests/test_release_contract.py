@@ -1,6 +1,10 @@
 from pathlib import Path
 import json
+import os
 import re
+import subprocess
+import sys
+import tempfile
 import unittest
 
 from release_contracts.model import (
@@ -95,6 +99,97 @@ class ReleaseModelTests(unittest.TestCase):
         self.assertIn("compatibility[0]", combined)
         self.assertIn("compatibility[1]", combined)
         self.assertIn("value omitted", combined)
+
+
+class ReleaseCliInputBoundaryTests(unittest.TestCase):
+    """The optional CI root must not read operator-selected external paths."""
+
+    def _invoke(self, claims: Path, compatibility: Path, input_root: Path | None) -> subprocess.CompletedProcess[str]:
+        command = [
+            sys.executable, "-B", "-m", "release_contracts.cli", "validate",
+            "--claims", str(claims), "--compatibility", str(compatibility),
+        ]
+        if input_root is not None:
+            command.extend(["--input-root", str(input_root)])
+        return subprocess.run(
+            command, cwd=ROOT, capture_output=True, text=True, timeout=12,
+            check=False,
+        )
+
+    def test_explicit_ci_root_allows_local_json_but_refuses_absolute_outside(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            trusted = root / "trusted"
+            outside = root / "outside"
+            trusted.mkdir()
+            outside.mkdir()
+            claims = trusted / "claims.json"
+            compatibility = trusted / "compatibility.json"
+            claims.write_text('{"claims":[]}', encoding="utf-8")
+            compatibility.write_text('{"compatibility":[]}', encoding="utf-8")
+            other = outside / "private.json"
+            secret = "sk-" + "Z" * 36  # Synthetic only; never a real key.
+            other.write_text(secret, encoding="utf-8")
+            allowed = self._invoke(claims, compatibility, trusted)
+            self.assertEqual(allowed.returncode, 0, allowed.stderr)
+            refused = self._invoke(other, compatibility, trusted)
+            self.assertEqual(refused.returncode, 1)
+            self.assertIn("FAIL: release input", refused.stdout)
+            self.assertNotIn(str(other), refused.stdout + refused.stderr)
+            self.assertNotIn(secret, refused.stdout + refused.stderr)
+            # Preserve the documented operator-selected file behavior when
+            # --input-root is not supplied; read-only access is intentional.
+            operator = self._invoke(claims, compatibility, None)
+            self.assertEqual(operator.returncode, 0)
+
+    def test_relative_escape_is_rejected_in_ci_mode(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            trusted = Path(directory) / "workspace"
+            trusted.mkdir()
+            compat = trusted / "compatibility.json"
+            compat.write_text('{"compatibility":[]}', encoding="utf-8")
+            escaped = trusted / ".." / "outside.json"
+            result = self._invoke(escaped, compat, trusted)
+            self.assertEqual(result.returncode, 1)
+            self.assertNotIn(str(escaped), result.stdout + result.stderr)
+
+    def test_junction_or_symlink_escape_is_rejected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            trusted, outside = root / "trusted", root / "outside"
+            trusted.mkdir()
+            outside.mkdir()
+            (outside / "claims.json").write_text('{"claims":[]}', encoding="utf-8")
+            compatibility = trusted / "compatibility.json"
+            compatibility.write_text('{"compatibility":[]}', encoding="utf-8")
+            link = trusted / "escape"
+            if os.name == "nt":
+                created = subprocess.run(
+                    ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(outside)],
+                    capture_output=True, text=True, check=False, timeout=10,
+                )
+                if created.returncode:
+                    self.skipTest("Windows junction unavailable")
+            else:
+                link.symlink_to(outside, target_is_directory=True)
+            result = self._invoke(link / "claims.json", compatibility, trusted)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("FAIL: release input", result.stdout)
+
+    def test_bad_json_never_echoes_content_or_private_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            marker = "sk-" + "Q" * 36
+            claims = root / "claims.json"
+            compatibility = root / "compatibility.json"
+            claims.write_text('{"claims":"not-an-array","token":"' + marker + '"}', encoding="utf-8")
+            compatibility.write_text('{"compatibility":[]}', encoding="utf-8")
+            result = self._invoke(claims, compatibility, root)
+            self.assertEqual(result.returncode, 1)
+            combined = result.stdout + result.stderr
+            self.assertIn("FAIL: release input", combined)
+            self.assertNotIn(marker, combined)
+            self.assertNotIn(str(root), combined)
 
 
 class ReleaseDocumentationTests(unittest.TestCase):
