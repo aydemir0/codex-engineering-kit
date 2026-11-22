@@ -69,6 +69,52 @@ Continuous learning produces `pending_review` candidates only. Candidates are no
 
 Read-only/custom-agent instructions constrain intended behavior but are not an operating-system sandbox. Repository/tool permissions and user review remain authoritative boundaries.
 
+### Verifier executes project-defined code
+
+Verification is **not** a passive security scanner. In supported projects it
+runs configured build, test, lint and/or typecheck commands with the invoking
+user's privileges. Project-controlled package scripts and test code are
+executable inputs; do not verify an unfamiliar repository as a trusted user
+or on a workstation with production credentials. For external beta testing,
+use only the documented disposable fixture and isolated Codex profile.
+
+On Windows, batch-backed commands use the operating system's system-directory
+`cmd.exe`, rather than the caller's `COMSPEC` or search `PATH`. Batch
+executable paths and arguments containing shell metacharacters are refused
+rather than interpolated. This is bounded hardening, not a guarantee that
+arbitrary project scripts are safe or a replacement for an OS sandbox.
+Some legitimate paths with special characters may require relocation.
+
+### Dependency update and scan coverage
+
+Dependabot vulnerability alerts and Dependabot security-update PRs are
+enabled for this repository. The `.github/dependabot.yml` configuration
+requests reviewed weekly GitHub Actions version-update PRs; there is **no
+automatic merge**. CI workflows continue to pin actions to full commit SHAs.
+
+GitHub CodeQL default setup is configured, but CodeQL, GitHub Code Scanning,
+and externally managed Semgrep Cloud checks are separate evidence surfaces.
+A successful external PR check does not imply that GitHub has stored
+code-scanning results or that a local scan has no findings. Dependency alerts
+are not comprehensive for unmanifested or externally installed packages,
+including the separately pinned Codex CLI.
+
+### Frozen historical benchmark dependency
+
+As of 22 November 2026, GitHub Dependabot reported **41 open alerts**
+(5 critical, 11 high, 21 moderate, 4 low) that all resolve to the
+`next: 15.0.0` declaration in the historical
+`benchmarks/fixtures/frontend-review/package.json`. This is **not an
+installed CEK runtime dependency**, but installing or running that benchmark
+fixture exposes it to those advisories. Do **not** install, serve or deploy
+the fixture on a trusted machine or with valuable credentials. External
+beta testers should use only the published calculator fixture.
+
+The benchmark fixture is pinned to a separate historical source commit.
+Do not alter its version without an explicit new fixture revision and
+separate benchmark protocol/evidence identity. The open alerts have **not**
+been dismissed or represented as remediated.
+
 ### Deterministic evidence vs model judgment
 
 When a condition can be verified through code, exit status, schema checks, tests, hashes, or file/state contracts, deterministic evidence takes priority over model judgment. Missing runtime evidence must not be promoted to PASS.

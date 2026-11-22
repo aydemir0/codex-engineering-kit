@@ -4,6 +4,7 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 from verification.process import run_command
@@ -102,6 +103,37 @@ class ProcessRunnerTests(unittest.TestCase):
         self.assertEqual(result.status, "failed")
         self.assertIsNone(result.exit_code)
         self.assertIn("unsafe argument", result.reason.casefold())
+
+    @unittest.skipUnless(os.name == "nt", "Windows .cmd executable-path contract")
+    def test_windows_batch_rejects_metacharacters_in_executable_path(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            for suffix in ("&", "%", "!", "^", "(", ")"):
+                with self.subTest(suffix=suffix):
+                    directory = root / ("unsafe" + suffix + "name")
+                    directory.mkdir()
+                    script = directory / "script.cmd"
+                    script.write_text("@echo SHOULD_NOT_RUN\r\n", encoding="ascii")
+                    result = run_command([str(script)], root)
+                    self.assertEqual(result.status, "failed")
+                    self.assertIsNone(result.exit_code)
+                    self.assertIn("unsafe executable path", result.reason.casefold())
+                    self.assertNotIn("SHOULD_NOT_RUN", result.stdout_tail)
+
+    @unittest.skipUnless(os.name == "nt", "Windows trusted cmd.exe contract")
+    def test_windows_batch_ignores_untrusted_comspec_override(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            script = root / "safe.cmd"
+            script.write_text("@echo TRUSTED_BATCH_OK\r\n", encoding="ascii")
+            fake = root / "fake.cmd"
+            fake.write_text("@echo COMSPEC_HIJACKED\r\n", encoding="ascii")
+            with mock.patch.dict(os.environ, {"COMSPEC": str(fake)}):
+                result = run_command([str(script)], root)
+            self.assertEqual(result.status, "passed")
+            self.assertEqual(result.exit_code, 0)
+            self.assertIn("TRUSTED_BATCH_OK", result.stdout_tail)
+            self.assertNotIn("COMSPEC_HIJACKED", result.stdout_tail)
 
 
 if __name__ == "__main__":

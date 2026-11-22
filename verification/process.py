@@ -11,6 +11,28 @@ from typing import Sequence
 
 MAX_CAPTURE_BYTES = 8192
 BATCH_UNSAFE_ARGUMENT = re.compile(r'[&|<>^%!()\r\n"]')
+# cmd.exe parses executable paths as shell syntax as well as argument values.
+# Refuse unsafe batch paths instead of trying to double-escape nested cmd /c input.
+BATCH_UNSAFE_PATH = re.compile(r'[&|<>^%!()\r\n"]')
+
+
+def _system_cmd_executable() -> str | None:
+    """Return the Windows system-directory cmd.exe, not an inherited COMSPEC/PATH."""
+    if os.name != "nt":
+        return None
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    get_system_directory = kernel32.GetSystemDirectoryW
+    get_system_directory.argtypes = [wintypes.LPWSTR, wintypes.UINT]
+    get_system_directory.restype = wintypes.UINT
+    buffer = ctypes.create_unicode_buffer(32768)
+    length = get_system_directory(buffer, len(buffer))
+    if not (0 < length < len(buffer)):
+        return None
+    candidate = Path(buffer.value) / "cmd.exe"
+    return str(candidate) if candidate.is_file() else None
 
 
 @dataclass(frozen=True)
@@ -70,6 +92,16 @@ def run_command(
     invocation: list[str] | str = [resolved, *command[1:]]
     executable: str | None = None
     if os.name == "nt" and Path(resolved).suffix.casefold() in {".cmd", ".bat"}:
+        if BATCH_UNSAFE_PATH.search(resolved):
+            return ProcessResult(
+                command=command,
+                exit_code=None,
+                duration_ms=0,
+                status="failed",
+                stdout_tail="",
+                stderr_tail="",
+                reason="Unsafe executable path rejected for Windows batch command",
+            )
         unsafe = next((part for part in command[1:] if BATCH_UNSAFE_ARGUMENT.search(part)), None)
         if unsafe is not None:
             return ProcessResult(
@@ -81,7 +113,17 @@ def run_command(
                 stderr_tail="",
                 reason="Unsafe argument rejected for Windows batch command",
             )
-        comspec = os.environ.get("COMSPEC") or shutil.which("cmd.exe") or "cmd.exe"
+        comspec = _system_cmd_executable()
+        if comspec is None:
+            return ProcessResult(
+                command=command,
+                exit_code=None,
+                duration_ms=0,
+                status="unavailable",
+                stdout_tail="",
+                stderr_tail="",
+                reason="Trusted Windows system cmd.exe unavailable",
+            )
         batch_command = subprocess.list2cmdline(invocation)
         command_prefix = subprocess.list2cmdline([comspec, "/d", "/s", "/c"])
         invocation = f'{command_prefix} "{batch_command}"'
