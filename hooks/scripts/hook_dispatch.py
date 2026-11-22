@@ -251,10 +251,38 @@ def dispatch(payload: dict[str, Any]) -> dict[str, Any]:
     raise ValueError(f"unsupported hook event: {event!r}")
 
 
+def _validate_host_workspace(payload: dict[str, Any]) -> Path:
+    """Bind an untrusted hook payload to the host's actual working directory.
+
+    Codex launches command hooks with the session cwd. A forged payload must
+    not redirect CEK state writes to an unrelated directory.
+    """
+    candidate = _workspace_dir(payload)
+    if not candidate.is_absolute() or ".." in candidate.parts:
+        raise ValueError("hook workspace must be an absolute, normalized path")
+    # Compare the untrusted string with the host working directory *before*
+    # doing any filesystem operation. Avoid resolving or stat-ing the JSON
+    # path; it is never allowed to choose a filesystem target.
+    trusted = Path.cwd()
+    if os.path.normcase(os.path.normpath(str(candidate))) != os.path.normcase(
+        os.path.normpath(str(trusted))
+    ):
+        raise ValueError("hook cwd does not match host process cwd")
+    # Only inspect the independently obtained host path and its ancestors.
+    # A reparse/symlink component cannot redirect our local state.
+    for component in (trusted, *trusted.parents):
+        reject_unsafe_state_path(component)
+    if not trusted.is_dir():
+        raise ValueError("hook workspace directory is unavailable")
+    return trusted
+
+
 def main() -> int:
     try:
         payload = load_payload(sys.stdin)
-        result = dispatch(payload)
+        trusted_workspace = _validate_host_workspace(payload)
+        # Never use the raw JSON path for state operations after validation.
+        result = dispatch({**payload, "cwd": str(trusted_workspace)})
     except (json.JSONDecodeError, OSError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         return 1
