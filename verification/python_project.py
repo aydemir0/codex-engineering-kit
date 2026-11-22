@@ -113,27 +113,23 @@ def _has_pytest_marker(project_path: Path, pyproject: dict) -> bool:
     )
 
 
-def _has_unittest_tree(project_path: Path) -> bool:
+def _test_paths(project_path: Path) -> tuple[Path, ...]:
     tests_dir = project_path / "tests"
-    if not tests_dir.is_dir():
-        return False
-    return any(path.is_file() for path in tests_dir.rglob("test*.py"))
+    paths = list(project_path.glob("test_*.py")) + list(project_path.glob("*_test.py"))
+    if tests_dir.is_dir():
+        paths.extend(tests_dir.rglob("test*.py"))
+        paths.extend(tests_dir.rglob("*_test.py"))
+    return tuple(sorted(set(paths)))
 
 
-def _test_styles(project_path: Path) -> frozenset[str]:
+def _test_styles(paths: tuple[Path, ...]) -> frozenset[str]:
     """Conservatively identify pytest-style functions and unittest.TestCase.
 
     This is a discovery hint, not proof that a particular test was collected.
     No candidate Python source is imported or executed during inspection.
     """
     styles: set[str] = set()
-    tests_dir = project_path / "tests"
-    paths = list(tests_dir.rglob("test*.py")) if tests_dir.is_dir() else []
-    if tests_dir.is_dir():
-        paths += list(tests_dir.rglob("*_test.py"))
-    paths += list(project_path.glob("test_*.py"))
-    paths += list(project_path.glob("*_test.py"))
-    for path in sorted(set(paths)):
+    for path in paths:
         if path.is_symlink() or not path.is_file():
             styles.add("unknown")
             continue
@@ -163,6 +159,41 @@ def _test_styles(project_path: Path) -> frozenset[str]:
                 elif node.name.startswith("Test"):
                     styles.add("pytest")
     return frozenset(styles)
+
+
+def _unittest_test_steps(
+    project_path: Path,
+    paths: tuple[Path, ...],
+    runner: Callable[[list[str], Path], ProcessResult],
+) -> PythonPresetResult:
+    tests_dir = project_path / "tests"
+    tree_paths = tuple(path for path in paths if path.is_relative_to(tests_dir))
+    tree_discoverable = tuple(
+        path for path in tree_paths
+        if re.fullmatch(r"test\w*\.py", path.name)
+        and all((tests_dir / directory / "__init__.py").is_file()
+                for directory in path.relative_to(tests_dir).parents[:-1])
+    )
+    root_paths = tuple(path for path in paths if path.parent == project_path)
+    root_modules = tuple(path.name for path in root_paths if path.stem.isidentifier())
+    steps: list[VerificationStep] = []
+    families: list[tuple[str, str]] = []
+    command = [sys.executable, "-m", "unittest"]
+    if tree_discoverable:
+        step = _run_step("tests", [*command, "discover", "-s", "tests"], project_path, runner)
+        steps.append(step)
+        families.append(("python-unittest", step.status))
+    if root_modules:
+        step = _run_step("tests-root", [*command, *root_modules], project_path, runner)
+        steps.append(step)
+        families.append(("python-unittest-root", step.status))
+    if len(tree_discoverable) != len(tree_paths) or len(root_modules) != len(root_paths):
+        steps.append(VerificationStep(
+            "tests-layout", None, "unavailable", None, 0,
+            "Some candidate tests are outside the supported unittest discovery layout.",
+        ))
+        families.append(("python-unittest-layout", "unavailable"))
+    return PythonPresetResult(tuple(steps), tuple(families))
 
 
 def _ruff_configured(project_path: Path, pyproject: dict) -> bool:
@@ -242,9 +273,9 @@ def discover_python_test_steps(
         pyproject = _read_pyproject(project_path)
     runner = _run_python_tests if runner is None else runner
     steps: list[VerificationStep] = []
-    styles = _test_styles(project_path)
+    paths = _test_paths(project_path)
+    styles = _test_styles(paths)
     wants_pytest = _has_pytest_marker(project_path, pyproject) or "pytest" in styles
-    has_unittest = "unittest" in styles or (_has_unittest_tree(project_path) and not wants_pytest)
     test_families: list[tuple[str, str]] = []
     if wants_pytest and module_available("pytest"):
         command = [sys.executable, "-m", "pytest"]
@@ -253,33 +284,18 @@ def discover_python_test_steps(
         test_families.append(("python-pytest", step.status))
         if "unittest" in styles:
             test_families.append(("python-unittest", "delegated-to-pytest"))
-    elif wants_pytest:
-        if has_unittest:
-            step = _run_step(
-                "tests",
-                [sys.executable, "-m", "unittest", "discover", "-s", "tests"],
-                project_path,
-                runner,
-            )
-            steps.append(step)
-            test_families.append(("python-unittest", step.status))
-            missing_name = "tests-pytest"
-        else:
-            missing_name = "tests"
-        steps.append(_unavailable(missing_name, [sys.executable, "-m", "pytest"], "pytest"))
-        test_families.append(("python-pytest", "unavailable"))
-    elif _has_unittest_tree(project_path):
-        step = _run_step(
-            "tests",
-            [sys.executable, "-m", "unittest", "discover", "-s", "tests"],
-            project_path,
-            runner,
-        )
-        steps.append(step)
-        test_families.append(("python-unittest", step.status))
     else:
-        steps.append(_skipped("tests", "No Python test gate discovered."))
-        test_families.append(("python", "skipped"))
+        if paths and (not wants_pytest or "unittest" in styles):
+            unittest_tests = _unittest_test_steps(project_path, paths, runner)
+            steps.extend(unittest_tests.steps)
+            test_families.extend(unittest_tests.test_families)
+        if wants_pytest:
+            name = "tests-pytest" if steps else "tests"
+            steps.append(_unavailable(name, [sys.executable, "-m", "pytest"], "pytest"))
+            test_families.append(("python-pytest", "unavailable"))
+        elif not steps:
+            steps.append(_skipped("tests", "No Python test gate discovered."))
+            test_families.append(("python", "skipped"))
 
     if "unknown" in styles:
         steps.append(

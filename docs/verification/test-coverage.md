@@ -20,6 +20,11 @@ subprocess sandboxing, and external services remain outside this contract.
   If only pytest-style tests exist without pytest, no passing gate is claimed.
   A unittest run collecting **zero tests** also becomes `unavailable`.
   Unreadable or syntactically invalid candidate test files prevent a full GREEN.
+  For unittest, CEK runs conventional discovery under `tests/` and explicitly
+  runs importable root test files as a separate step. Nested directories
+  under `tests/` require package markers for unittest discovery. Candidate
+  files outside the supported layout leave the report `partial` when the
+  attempted checks pass.
 - **Node + Python markers in the same project root.** Run the Node preset and
   the discovered Python tests, even if the Node tests fail. Python steps get a
   `-python` suffix in the report and publish their own test families. Both

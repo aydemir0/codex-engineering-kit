@@ -152,6 +152,46 @@ class CoverageContractTests(unittest.TestCase):
         self.assertEqual(dict(report.test_families), {"node": "passed", "python-unittest": "failed"})
         self.assertEqual(cached.read_bytes(), cache_bytes)
 
+    @unittest.skipUnless(shutil.which("node") and shutil.which("npm"), "Node/npm unavailable")
+    def test_mixed_contract_includes_root_unittest_alongside_tests_directory(self) -> None:
+        self.add_mixed_contract_fixture(2, 2)
+        (self.root / "test_root_contract.py").write_text(
+            "import unittest\nclass RootContract(unittest.TestCase):\n"
+            "    def test_version(self): self.assertEqual(2, 1)\n",
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            [sys.executable, "-B", "-m", "verification.cli", "--project", str(self.root),
+             "--json", "--require-complete"],
+            cwd=ROOT, capture_output=True, text=True, timeout=30,
+        )
+        data = json.loads(result.stdout)
+        self.assertEqual(result.returncode, 1, data)
+        self.assertEqual(data["status"], "failed")
+        self.assertIn({"family": "python-unittest-root", "status": "failed"}, data["testFamilies"])
+
+    def test_unittest_candidate_outside_discovery_layout_is_partial(self) -> None:
+        tests = self.root / "tests"
+        tests.mkdir()
+        self.add_test_file(
+            "test_math.py",
+            "import unittest\nclass Math(unittest.TestCase):\n"
+            "    def test_total(self): self.assertEqual(2 + 2, 4)\n",
+        )
+        nested = tests / "nested"
+        nested.mkdir()
+        (nested / "test_missing.py").write_text(
+            "import unittest\nclass Missing(unittest.TestCase):\n"
+            "    def test_failure(self): self.assertEqual(2 + 2, 5)\n",
+            encoding="utf-8",
+        )
+        report = verify_project(self.root)
+        self.assertEqual(report.status, "partial")
+        self.assertEqual(
+            dict(report.test_families),
+            {"python-unittest": "passed", "python-unittest-layout": "unavailable"},
+        )
+
     @unittest.skipUnless(shutil.which("pnpm") and shutil.which("node"), "pnpm/node unavailable")
     def test_pnpm_script_matches_direct_invocation(self) -> None:
         (self.root / "package.json").write_text(
