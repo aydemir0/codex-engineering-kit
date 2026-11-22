@@ -58,6 +58,34 @@ python scripts/cek_lifecycle.py verify-clean --project <project-root> --codex-ho
 
 Use `--codex-home <path>` only when intentionally managing a non-default Codex profile. The lifecycle never copies `auth.json`, credentials, normal-profile configuration, or user-private skills.
 
+### Bounded Codex lifecycle operations (post-beta source only)
+
+In the updated source, each managed Codex CLI subprocess has a **120-second
+default timeout**. An operator can change the bound for one invocation by adding
+`--codex-timeout-seconds 30` to the lifecycle command (positive number,
+maximum 900 seconds). The timeout applies to version, marketplace, plugin list,
+install, update and removal calls **inside `scripts/cek_lifecycle.py`**. A
+failed command exits nonzero and identifies a static phase such as
+`CODEX_CLI_TIMEOUT: phase=plugin list; limit=30s`. It does not display raw
+command arguments, authentication material, or an environment dump.
+
+The timeout handler attempts to terminate the child process tree and does
+not delete existing managed-state manifests or user-owned files. **A native
+command may already have partially modified Codex's plugin state.** On a
+timeout during an uncertain native mutation, CEK does not perform automatic
+marketplace/plugin rollback. Inspect the **isolated** `CODEX_HOME` and its
+existing ownership manifests; retry `verify` when the CLI is responsive.
+Do not blindly rerun `install`, remove plugin cache directories, or copy
+credentials from a normal profile. Timeout cleanup is best-effort and is not
+a general-purpose process sandbox.
+
+**Release boundary:** These hardening changes are after the frozen
+`v1.1.0-beta.1` tag. Cloning that published tag does **not** include this
+timeout. Also, direct shell calls such as `& $CekCodex plugin list --json`,
+`& $CekCodex login status` or `exec` remain outside the lifecycle timeout
+wrapper. The beta quickstart's redundant direct plugin-list step can be omitted
+because managed `verify` performs enumeration already.
+
 For direct `plugin list --json` or `debug prompt-input` CLI discovery commands,
 set `CODEX_HOME` in that child process to the same isolated profile. A prompt-input
 preview demonstrates enumeration, not model execution. Do not substitute an

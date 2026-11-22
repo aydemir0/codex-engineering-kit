@@ -213,7 +213,7 @@ class CleanInstallLifecycleTests(unittest.TestCase):
         codex = FakeCodex()
         with patch("scripts.cek_lifecycle.require_complete_package"), patch("scripts.cek_lifecycle.require_native_host", return_value={}), patch(
             "scripts.cek_lifecycle.run_codex",
-            side_effect=lambda _executable, args, env: codex(args, env),
+            side_effect=lambda _executable, args, env, timeout_seconds=120: codex(args, env),
         ):
             exit_code = main(
                 [
