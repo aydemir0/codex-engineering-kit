@@ -12,7 +12,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any, BinaryIO, Callable, Mapping, Sequence
 
 # Preserve the documented direct-script entry point as well as module imports.
 if __package__ in {None, ""}:
@@ -180,7 +180,7 @@ def _windows_taskkill() -> str | None:
     return str(tool) if tool.is_file() else None
 
 
-def _stop_codex_tree(process: subprocess.Popen[str]) -> None:
+def _stop_codex_tree(process: subprocess.Popen[bytes]) -> None:
     """Best-effort bounded cleanup; never leave the parent waiting indefinitely."""
     if process.poll() is None:
         if os.name == "nt":
@@ -210,15 +210,16 @@ def _stop_codex_tree(process: subprocess.Popen[str]) -> None:
             except OSError:
                 pass
     try:
-        process.communicate(timeout=3)
+        process.wait(timeout=2)
     except (subprocess.TimeoutExpired, OSError):
-        for stream in (process.stdout, process.stderr):
-            if stream is not None:
-                stream.close()
-        try:
-            process.wait(timeout=2)
-        except (subprocess.TimeoutExpired, OSError):
-            pass
+        pass
+
+
+def _read_codex_output(output: BinaryIO) -> str:
+    size = os.fstat(output.fileno()).st_size
+    output.seek(0)
+    text = output.read(size).decode("utf-8", errors="replace")
+    return text.replace("\r\n", "\n").replace("\r", "\n").strip()
 
 
 def run_codex(
@@ -231,29 +232,35 @@ def run_codex(
     timeout = _validated_timeout(float(timeout_seconds))
     resolved = shutil.which(executable, path=env.get("PATH"))
     command = [resolved or executable, *args]
-    process: subprocess.Popen[str] | None = None
+    process: subprocess.Popen[bytes] | None = None
     try:
-        process = subprocess.Popen(
-            command,
-            env=dict(env),
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            shell=False,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0,
-            start_new_session=os.name != "nt",
-        )
-        stdout, stderr = process.communicate(timeout=timeout)
-    except subprocess.TimeoutExpired as exc:
+        # A descendant can inherit stdout and stderr even when it outlives the
+        # CLI. File captures let wait() enforce a deadline without pipe EOF.
+        with tempfile.TemporaryFile() as stdout, tempfile.TemporaryFile() as stderr:
+            process = subprocess.Popen(
+                command,
+                env=dict(env),
+                stdin=subprocess.DEVNULL,
+                stdout=stdout,
+                stderr=stderr,
+                shell=False,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0,
+                start_new_session=os.name != "nt",
+            )
+            returncode = process.wait(timeout=timeout)
+            return {
+                "returncode": returncode,
+                "stdout": _read_codex_output(stdout),
+                "stderr": _read_codex_output(stderr),
+            }
+    except subprocess.TimeoutExpired:
         if process is not None:
             _stop_codex_tree(process)
         phase = _codex_phase(list(args))
         raise LifecycleTimeoutError(
             f"CODEX_CLI_TIMEOUT: phase={phase}; limit={timeout:g}s. "
             "Codex command did not finish; lifecycle success was not claimed. "
+            "Descendants may remain running if the OS refused process cleanup. "
             "Existing managed-state manifests were not deleted by timeout handling. "
             "The CLI may have partially changed plugin state; inspect the isolated CODEX_HOME "
             "and retry verify once the CLI is responsive. Do not reinstall or clean up blindly."
@@ -262,11 +269,6 @@ def run_codex(
         if process is not None:
             _stop_codex_tree(process)
         raise LifecycleError("Codex executable could not be started or read") from exc
-    return {
-        "returncode": process.returncode,
-        "stdout": stdout.strip(),
-        "stderr": stderr.strip(),
-    }
 
 
 def _checked(run: Runner, args: list[str], env: dict[str, str], label: str) -> dict[str, Any]:

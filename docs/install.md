@@ -69,8 +69,10 @@ failed command exits nonzero and identifies a static phase such as
 `CODEX_CLI_TIMEOUT: phase=plugin list; limit=30s`. It does not display raw
 command arguments, authentication material, or an environment dump.
 
-The timeout handler attempts to terminate the child process tree and does
-not delete existing managed-state manifests or user-owned files. **A native
+On timeout, CEK attempts to terminate the child process tree within a short
+cleanup window. Descendants may continue running if the operating system
+denies cleanup. CEK does not wait for those processes to close their output.
+Existing managed-state manifests and user-owned files are preserved. **A native
 command may already have partially modified Codex's plugin state.** On a
 timeout during an uncertain native mutation, CEK does not perform automatic
 marketplace/plugin rollback. Inspect the **isolated** `CODEX_HOME` and its
