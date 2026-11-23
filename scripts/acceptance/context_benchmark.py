@@ -31,6 +31,19 @@ from benchmarks.report import BenchmarkReport, build_report, load_run_records
 
 KIND = "authenticated-context-benchmark"
 SMOKE_KIND = "authenticated-context-benchmark-smoke"
+LEGACY_UNSAFE_FIXTURE = "frontend-review"
+LEGACY_UNSAFE_MESSAGE = (
+    "The historical frontend-review fixture has unresolved vulnerable dependencies "
+    "and is disabled for new benchmark execution. Use a newly versioned, "
+    "security-reviewed fixture instead. Frozen results remain available for analysis."
+)
+
+
+def _reject_deprecated_fixture_cases(cases: Sequence[BenchmarkCase]) -> None:
+    if any(case.fixture == LEGACY_UNSAFE_FIXTURE for case in cases):
+        raise ValueError(LEGACY_UNSAFE_MESSAGE)
+
+
 RETRY_POLICY = (
     "One attempt per planned tuple; no selective retries. A proven whole-campaign "
     "infrastructure defect invalidates the campaign and requires a new campaign ID."
@@ -472,6 +485,7 @@ def _run_attempt(
     timeout_seconds: float,
     environment: dict[str, str],
 ) -> dict[str, Any]:
+    _reject_deprecated_fixture_cases((case,))
     hook_capture = b""
     with tempfile.TemporaryDirectory(prefix="cek-context-benchmark-") as temporary:
         work = Path(temporary)
@@ -635,6 +649,12 @@ def run_context_benchmark(
     cases = load_cases(case_dir)
     configurations = load_configurations(configuration_dir)
     fixture_commit = _verify_fixture_pins(repo_path, fixture_root, cases)
+    attempts = planned_attempts(cases, configurations, 3)
+    if smoke:
+        case = next(item for item in cases if item.id == "node-small-bug")
+        configuration = next(item for item in configurations if item.id == "C")
+        attempts = ((case, configuration, 1),)
+    _reject_deprecated_fixture_cases(tuple(case for case, _, _ in attempts))
     env = dict(os.environ if environment is None else environment)
     codex_home = env.get("CODEX_HOME")
     env = {name: value for name, value in env.items() if not name.upper().startswith("CODEX_")}
@@ -651,11 +671,6 @@ def run_context_benchmark(
             env["HOMEDRIVE"] = profile.drive
             env["HOMEPATH"] = str(profile)[len(profile.drive) :]
     codex_version = _probe(codex_command, repo_path, env)
-    attempts = planned_attempts(cases, configurations, 3)
-    if smoke:
-        case = next(item for item in cases if item.id == "node-small-bug")
-        configuration = next(item for item in configurations if item.id == "C")
-        attempts = ((case, configuration, 1),)
 
     record: dict[str, Any] = {
         "campaignId": campaign_id,
