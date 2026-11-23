@@ -39,10 +39,14 @@ individual attempt function; no production override is supported. Historical
 synthetic regression tests explicitly mock this guard while using fake Codex.
 
 Do **not** run `npm install`, `npm ci`, `npm run`, start a development server,
-or deploy `benchmarks/fixtures/frontend-review` manually. This runner guard
-cannot prevent direct shell commands issued outside CEK: use a non-executable
-archival representation or a separately isolated environment for any further
-study. The candidate under `benchmarks/candidates/frontend-review-v2` is not
+or deploy `benchmarks/fixtures/frontend-review` manually. The installable
+historical `package.json` is now retired from the active fixture tree and
+preserved as `benchmarks/archive/frontend-review-v1/package.json.txt` (plus
+the exact original Git blob at the historical pinned commit). The runner
+verifies the archived text against that commit before other supported
+synthetic operations. It still cannot prohibit someone manually recreating
+an unsafe `package.json` outside CEK. The candidate under
+`benchmarks/candidates/frontend-review-v2` is not
 part of the historical protocol and requires a distinct campaign ID and
 security approval before model execution. Frozen results are unchanged.
 

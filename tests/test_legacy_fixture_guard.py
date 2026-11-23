@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import tempfile
+import subprocess
 import unittest
 from dataclasses import replace
 from pathlib import Path
@@ -10,6 +11,9 @@ from unittest.mock import patch
 from benchmarks.model import load_cases, load_configurations
 from scripts.acceptance.context_benchmark import (
     LEGACY_UNSAFE_MESSAGE,
+    LEGACY_ARCHIVED_MANIFEST,
+    LEGACY_ORIGINAL_MANIFEST,
+    _verify_fixture_pins,
     _reject_deprecated_fixture_cases,
     _run_attempt,
     run_context_benchmark,
@@ -26,6 +30,23 @@ class LegacyFixtureGuardTests(unittest.TestCase):
         self.cases = load_cases(ROOT / "benchmarks" / "cases")
         self.configurations = load_configurations(ROOT / "benchmarks" / "configurations")
         self.legacy = next(case for case in self.cases if case.fixture == "frontend-review")
+
+    def test_legacy_manifest_is_non_installable_and_archived_exactly(self) -> None:
+        self.assertFalse((ROOT / LEGACY_ORIGINAL_MANIFEST).exists())
+        archived = ROOT / LEGACY_ARCHIVED_MANIFEST
+        self.assertTrue(archived.is_file())
+        original = subprocess.check_output(
+            ["git", "show", f"{self.legacy.repository_commit}:{LEGACY_ORIGINAL_MANIFEST}"],
+            cwd=ROOT,
+        )
+        self.assertEqual(archived.read_bytes().replace(b"\r\n", b"\n"), original)
+        self.assertIn(b'"next": "15.0.0"', original)
+
+    def test_fixture_provenance_still_checks_historical_git_blob(self) -> None:
+        self.assertEqual(
+            _verify_fixture_pins(ROOT, ROOT / "benchmarks" / "fixtures", self.cases),
+            self.legacy.repository_commit,
+        )
 
     def test_legacy_fixture_is_rejected_even_when_case_id_is_renamed(self) -> None:
         renamed = replace(self.legacy, id="renamed-unsafe-case")

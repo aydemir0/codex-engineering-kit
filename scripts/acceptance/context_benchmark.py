@@ -32,6 +32,8 @@ from benchmarks.report import BenchmarkReport, build_report, load_run_records
 KIND = "authenticated-context-benchmark"
 SMOKE_KIND = "authenticated-context-benchmark-smoke"
 LEGACY_UNSAFE_FIXTURE = "frontend-review"
+LEGACY_ARCHIVED_MANIFEST = Path("benchmarks/archive/frontend-review-v1/package.json.txt")
+LEGACY_ORIGINAL_MANIFEST = "benchmarks/fixtures/frontend-review/package.json"
 LEGACY_UNSAFE_MESSAGE = (
     "The historical frontend-review fixture has unresolved vulnerable dependencies "
     "and is disabled for new benchmark execution. Use a newly versioned, "
@@ -355,12 +357,26 @@ def _verify_fixture_pins(repo_path: Path, fixture_root: Path, cases: tuple[Bench
     commit = next(iter(commits))
     relative_root = fixture_root.resolve().relative_to(repo_path.resolve())
     for case in cases:
-        relative = (relative_root / case.fixture).as_posix()
+        relative = relative_root / case.fixture
+        if case.fixture == LEGACY_UNSAFE_FIXTURE:
+            # The installable manifest was retired. Verify the archive against
+            # the historical Git blob instead of restoring package.json.
+            active_manifest = repo_path / relative / "package.json"
+            archive = repo_path / LEGACY_ARCHIVED_MANIFEST
+            baseline = subprocess.run(
+                ["git", "show", f"{commit}:{LEGACY_ORIGINAL_MANIFEST}"],
+                cwd=str(repo_path), capture_output=True, check=False, shell=False,
+            )
+            if (
+                active_manifest.exists() or not archive.is_file()
+                or baseline.returncode != 0
+                or archive.read_bytes().replace(b"\r\n", b"\n") != baseline.stdout
+            ):
+                raise ValueError("historical frontend manifest archive is missing or modified")
+            relative = relative / "app/page.tsx"
         completed = subprocess.run(
-            ["git", "diff", "--quiet", commit, "--", relative],
-            cwd=str(repo_path),
-            check=False,
-            shell=False,
+            ["git", "diff", "--quiet", commit, "--", relative.as_posix()],
+            cwd=str(repo_path), check=False, shell=False,
         )
         if completed.returncode != 0:
             raise ValueError(f"fixture differs from pinned commit: {case.id}")
@@ -648,13 +664,13 @@ def run_context_benchmark(
         _verify_candidate(repo_path, cek_commit)
     cases = load_cases(case_dir)
     configurations = load_configurations(configuration_dir)
-    fixture_commit = _verify_fixture_pins(repo_path, fixture_root, cases)
     attempts = planned_attempts(cases, configurations, 3)
     if smoke:
         case = next(item for item in cases if item.id == "node-small-bug")
         configuration = next(item for item in configurations if item.id == "C")
         attempts = ((case, configuration, 1),)
     _reject_deprecated_fixture_cases(tuple(case for case, _, _ in attempts))
+    fixture_commit = _verify_fixture_pins(repo_path, fixture_root, cases)
     env = dict(os.environ if environment is None else environment)
     codex_home = env.get("CODEX_HOME")
     env = {name: value for name, value in env.items() if not name.upper().startswith("CODEX_")}

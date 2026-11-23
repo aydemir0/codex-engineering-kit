@@ -140,9 +140,19 @@ the fixture on a trusted machine or with valuable credentials. External
 beta testers should use only the published calculator fixture.
 
 The benchmark fixture is pinned to a separate historical source commit.
-Do not alter its version without an explicit new fixture revision and
-separate benchmark protocol/evidence identity. The open alerts have **not**
-been dismissed or represented as remediated.
+Its original installable `package.json` has been retired from the active
+fixture tree and archived as plain text at
+`benchmarks/archive/frontend-review-v1/package.json.txt`. The archive is
+verified against the historical Git blob, while `app/page.tsx` and all
+frozen evidence remain unchanged. A CEK runner fail-closed guard rejects new
+execution of this legacy fixture. Direct manual restoration or installation
+outside the runner is not a supported activity. GitHub Dependabot alert counts
+must be rechecked after GitHub processes the changed manifest surface; do not
+assume that previous advisories have automatically disappeared.
+
+Do not silently alter historical dependency versions without a separately
+pinned fixture identity and new protocol. Previous vulnerability alerts have
+**not** been dismissed or represented as resolved by the runner guard alone.
 
 ### Deterministic evidence vs model judgment
 
