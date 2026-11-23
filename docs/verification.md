@@ -21,11 +21,15 @@ Every verification step records its command, exit code, duration, status, and bo
 
 Overall report status is:
 
-- `failed` when any step failed;
-- `partial` when required discovered evidence is unavailable, or when only generic checks are possible and no project-specific executable gate ran;
-- `passed` when no step failed or is required-but-unavailable and at least one executable gate ran successfully.
+- `failed` when any step failed.
+- `partial` when required evidence is unavailable, a detected test family
+  could not run, or the project has no runnable test gate.
+- `passed` when the detected test families are covered, the required checks
+  succeeded, and the candidate remained stable during verification.
 
-The CLI exits with code `1` only for an overall `failed` report. `partial` is still explicit in the JSON but does not become a fabricated failure or success.
+The CLI exits with code `1` for `failed`. Use `--require-complete` in CI to
+also reject `partial` with exit code `2`. See
+[test-family coverage](verification/test-coverage.md) for discovery limits.
 
 ## Project classification
 
@@ -36,6 +40,10 @@ Classification priority is:
 3. generic repository otherwise.
 
 Generic checks include deterministic secret-like material scanning and `git diff --check` when the target is a Git worktree.
+
+When Node and Python markers coexist in the same project root, CEK retains
+the Node classification and runs both the Node preset and the discovered
+Python tests. The Python steps have distinct names such as `tests-python`.
 
 ## Node package-manager resolution
 
@@ -68,6 +76,7 @@ It is a versioned state document with:
 - project type and path
 - selected package manager when applicable
 - every step's command, exit code, duration, status, and bounded evidence
+- detected test families and their statuses
 - final report status
 
 Captured process stdout/stderr is bounded before it reaches artifacts. Runtime artifacts stay under gitignored `.codex-kit/`; raw private transcripts, credentials, and tokens are not part of the verification report contract.
