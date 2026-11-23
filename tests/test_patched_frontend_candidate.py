@@ -16,7 +16,15 @@ PIN = "1dbf382b6e838ca351c6fb8818a64aa793176198"
 
 class PatchedFrontendCandidateTests(unittest.TestCase):
     def test_legacy_fixture_and_protocol_are_untouched(self) -> None:
-        original = json.loads((LEGACY / "package.json").read_text(encoding="utf-8"))
+        active_manifest = LEGACY / "package.json"
+        archived_manifest = ROOT / "benchmarks" / "archive" / "frontend-review-v1" / "package.json.txt"
+        if archived_manifest.is_file():
+            # A security-hardening follow-up retires the installable manifest.
+            self.assertFalse(active_manifest.exists())
+            manifest = archived_manifest
+        else:
+            manifest = active_manifest
+        original = json.loads(manifest.read_text(encoding="utf-8"))
         self.assertEqual(original["dependencies"]["next"], "15.0.0")
         self.assertEqual(original["dependencies"]["react"], "19.0.0")
         cases = load_cases(ROOT / "benchmarks" / "cases")
