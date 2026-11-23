@@ -1,0 +1,104 @@
+"""Negative tests for the deprecated historical frontend fixture execution boundary."""
+from __future__ import annotations
+
+import tempfile
+import unittest
+from dataclasses import replace
+from pathlib import Path
+from unittest.mock import patch
+
+from benchmarks.model import load_cases, load_configurations
+from scripts.acceptance.context_benchmark import (
+    LEGACY_UNSAFE_MESSAGE,
+    _reject_deprecated_fixture_cases,
+    _run_attempt,
+    run_context_benchmark,
+)
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class LegacyFixtureGuardTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.work = Path(self.temp.name)
+        self.cases = load_cases(ROOT / "benchmarks" / "cases")
+        self.configurations = load_configurations(ROOT / "benchmarks" / "configurations")
+        self.legacy = next(case for case in self.cases if case.fixture == "frontend-review")
+
+    def test_legacy_fixture_is_rejected_even_when_case_id_is_renamed(self) -> None:
+        renamed = replace(self.legacy, id="renamed-unsafe-case")
+        with self.assertRaisesRegex(ValueError, "disabled for new benchmark execution"):
+            _reject_deprecated_fixture_cases((renamed,))
+
+    def test_safe_case_is_not_blocked(self) -> None:
+        safe = next(case for case in self.cases if case.fixture == "node-small-bug")
+        _reject_deprecated_fixture_cases((safe,))
+
+    def test_full_campaign_denied_before_codex_probe_or_artifact_creation(self) -> None:
+        output = self.work / "campaign.json"
+        raw = self.work / "raw"
+        with patch(
+            "scripts.acceptance.context_benchmark._probe",
+            side_effect=AssertionError("Codex must not be probed"),
+        ), patch(
+            "scripts.acceptance.context_benchmark._run_attempt",
+            side_effect=AssertionError("No benchmark attempt may execute"),
+        ):
+            with self.assertRaisesRegex(ValueError, "historical frontend-review"):
+                run_context_benchmark(
+                    codex_command=("not-a-real-codex",),
+                    repo_path=ROOT,
+                    case_dir=ROOT / "benchmarks" / "cases",
+                    configuration_dir=ROOT / "benchmarks" / "configurations",
+                    fixture_root=ROOT / "benchmarks" / "fixtures",
+                    skill_root=ROOT / "skills",
+                    explorer_agent=ROOT / ".codex" / "agents" / "explorer.toml",
+                    hook_manifest=ROOT / "hooks" / "hooks.json",
+                    hook_dispatcher=ROOT / "hooks" / "scripts" / "hook_dispatch.py",
+                    output_path=output,
+                    raw_dir=raw,
+                    cek_commit="0" * 40,
+                    campaign_id="guard-negative",
+                    model="no-model",
+                    reasoning="medium",
+                    timeout_seconds=1,
+                )
+        self.assertFalse(output.exists())
+        self.assertFalse(raw.exists())
+
+    def test_direct_attempt_denied_before_fixture_copy_or_process(self) -> None:
+        with patch(
+            "scripts.acceptance.context_benchmark.shutil.copytree",
+            side_effect=AssertionError("Fixture must not be copied"),
+        ), patch(
+            "scripts.acceptance.context_benchmark._run",
+            side_effect=AssertionError("Process must not execute"),
+        ):
+            with self.assertRaisesRegex(ValueError, "disabled for new benchmark execution"):
+                _run_attempt(
+                    ordinal=1,
+                    case=self.legacy,
+                    configuration=self.configurations[0],
+                    repeat=1,
+                    codex_command=("no-codex",),
+                    codex_version="irrelevant",
+                    fixture_root=ROOT / "benchmarks" / "fixtures",
+                    skill_root=ROOT / "skills",
+                    explorer_agent=ROOT / ".codex" / "agents" / "explorer.toml",
+                    raw_dir=self.work / "raw",
+                    model="no-model",
+                    reasoning="medium",
+                    timeout_seconds=1,
+                    environment={},
+                )
+        self.assertFalse((self.work / "raw").exists())
+
+    def test_security_message_has_no_override_instructions(self) -> None:
+        self.assertIn("unresolved vulnerable dependencies", LEGACY_UNSAFE_MESSAGE)
+        self.assertNotIn("override", LEGACY_UNSAFE_MESSAGE.lower())
+
+
+if __name__ == "__main__":
+    unittest.main()
