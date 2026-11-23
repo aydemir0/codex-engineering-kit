@@ -7,7 +7,7 @@ import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Sequence
+from typing import Mapping, Sequence
 
 MAX_CAPTURE_BYTES = 8192
 BATCH_UNSAFE_ARGUMENT = re.compile(r'[&|<>^%!()\r\n"]')
@@ -72,6 +72,8 @@ def run_command(
     args: Sequence[str],
     cwd: Path,
     timeout_seconds: float = 120,
+    *,
+    env: Mapping[str, str] | None = None,
 ) -> ProcessResult:
     if not args:
         raise ValueError("command must contain at least one argument")
@@ -135,6 +137,7 @@ def run_command(
             invocation,
             executable=executable,
             cwd=str(cwd),
+            env=env,
             shell=False,
             capture_output=True,
             text=True,

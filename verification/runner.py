@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 from runtime.state import write_state
@@ -7,7 +8,7 @@ from verification.git_checks import run_git_diff_check
 from verification.candidate import capture_manifest, manifest_digest, assert_report_current, CandidateIntegrityError
 from verification.model import VerificationReport, VerificationStep
 from verification.node import discover_node_steps
-from verification.python_project import discover_python_steps
+from verification.python_project import discover_python_steps, discover_python_test_steps
 from verification.security import redact_sensitive_text, scan_secret_patterns
 
 SCHEMA_VERSION = 1
@@ -132,18 +133,11 @@ def verify_project(
         node_test = next((step for step in project_steps if step.name == "tests"), None)
         test_families = (("node", node_test.status if node_test else "skipped"),)
         if _has_python_markers(project_path):
-            # Never infer that Node success covers a Python test tree.
-            project_steps += (
-                VerificationStep(
-                    "tests-python",
-                    None,
-                    "unavailable",
-                    None,
-                    0,
-                    "Python project/test markers discovered, but the Node preset did not run Python tests. Verify Python separately.",
-                ),
+            python_tests = discover_python_test_steps(project_path)
+            project_steps += tuple(
+                replace(step, name=f"{step.name}-python") for step in python_tests.steps
             )
-            test_families += (("python", "not-run"),)
+            test_families += python_tests.test_families
     elif _has_python_markers(project_path):
         project_type = "python"
         preset = discover_python_steps(project_path)

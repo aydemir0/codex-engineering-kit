@@ -1,6 +1,10 @@
 from pathlib import Path
 import json
+import os
 import re
+import subprocess
+import sys
+import tempfile
 import unittest
 
 from release_contracts.model import (
@@ -95,6 +99,94 @@ class ReleaseModelTests(unittest.TestCase):
         self.assertIn("compatibility[0]", combined)
         self.assertIn("compatibility[1]", combined)
         self.assertIn("value omitted", combined)
+
+
+class ReleaseCliInputBoundaryTests(unittest.TestCase):
+    """CI input paths are fixed; operator-only mode remains intentional."""
+
+    def _invoke(
+        self, claims: str, compatibility: str, *, strict: bool
+    ) -> subprocess.CompletedProcess[str]:
+        command = [
+            sys.executable, "-B", "-m", "release_contracts.cli", "validate",
+            "--claims", claims, "--compatibility", compatibility,
+        ]
+        if strict:
+            command.append("--ci-contract-files")
+        return subprocess.run(
+            command, cwd=ROOT, capture_output=True, text=True,
+            timeout=12, check=False,
+        )
+
+    def test_ci_fixed_repository_files_are_valid(self) -> None:
+        result = self._invoke(
+            "release_contracts/claims.json",
+            "release_contracts/compatibility.json",
+            strict=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("13 claims and 13 compatibility surfaces", result.stdout)
+
+    def test_untrusted_absolute_or_relative_cli_paths_are_refused_in_ci(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            outside = root / "outside.json"
+            sentinel = "EXTERNAL_NONSECRET_FIXTURE_VALUE"
+            outside.write_text(sentinel, encoding="utf-8")
+            for candidate in (str(outside), "../other.json", "./release_contracts/claims.json"):
+                with self.subTest(candidate=candidate):
+                    result = self._invoke(
+                        candidate, "release_contracts/compatibility.json", strict=True,
+                    )
+                    self.assertEqual(result.returncode, 1)
+                    self.assertIn("FAIL: release input", result.stdout)
+                    self.assertNotIn(str(outside), result.stdout + result.stderr)
+                    self.assertNotIn(sentinel, result.stdout + result.stderr)
+
+    def test_ci_static_paths_cannot_follow_reparse_ancestors_outside_root(self) -> None:
+        from unittest.mock import patch
+        from release_contracts.cli import _ci_contract_paths
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            trusted, outside = root / "trusted", root / "outside"
+            trusted.mkdir()
+            outside.mkdir()
+            (outside / "claims.json").write_text('{"claims":[]}', encoding="utf-8")
+            (outside / "compatibility.json").write_text('{"compatibility":[]}', encoding="utf-8")
+            link = trusted / "release_contracts"
+            if os.name == "nt":
+                proc = subprocess.run(
+                    ["cmd.exe", "/d", "/c", "mklink", "/J", str(link), str(outside)],
+                    capture_output=True, text=True, timeout=10, check=False,
+                )
+                if proc.returncode:
+                    self.skipTest("Windows junction unavailable")
+            else:
+                link.symlink_to(outside, target_is_directory=True)
+            with patch("release_contracts.cli.Path.cwd", return_value=trusted):
+                with self.assertRaisesRegex(ValueError, "escapes repository"):
+                    _ci_contract_paths(
+                        "release_contracts/claims.json",
+                        "release_contracts/compatibility.json",
+                    )
+
+    def test_explicit_operator_paths_still_work_and_bad_json_is_redacted(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            claims, compatibility = root / "claims.json", root / "compatibility.json"
+            claims.write_text('{"claims":[]}', encoding="utf-8")
+            compatibility.write_text('{"compatibility":[]}', encoding="utf-8")
+            result = self._invoke(str(claims), str(compatibility), strict=False)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            marker = "MALFORMED_INPUT_SENTINEL"
+            claims.write_text('{"claims":"unexpected","text":"' + marker + '"}', encoding="utf-8")
+            bad = self._invoke(str(claims), str(compatibility), strict=False)
+            self.assertEqual(bad.returncode, 1)
+            combined = bad.stdout + bad.stderr
+            self.assertIn("FAIL: release input", combined)
+            self.assertNotIn(str(root), combined)
+            self.assertNotIn(marker, combined)
 
 
 class ReleaseDocumentationTests(unittest.TestCase):
