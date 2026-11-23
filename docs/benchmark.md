@@ -28,6 +28,28 @@ Task PASS/FAIL outcomes remain task outcomes. The report generator does not prod
 
 The completed frozen campaign contains 45 authenticated runs: A 15/15 PASS, B 15/15 PASS, C 4/15 PASS, and 34 PASS / 11 retained FAIL overall. There was no retry or replacement of a failed counted attempt. These measurements are descriptive for the frozen task/runtime set only; they do not support a general efficiency, context-reduction, latency, quality-superiority, statistical-significance, or benchmark-leadership claim. The CLI 0.153.0 unauthorized connector startup warning remains a documented limitation, not evidence of connector isolation. The sanitized measurements and exact closure boundary are recorded in `docs/research/evidence/codex-v1-ws6-benchmark.md`.
 
+## Historical fixture security boundary (post-v1)
+
+The historical `frontend-review` fixture pins vulnerable Next.js/React dependencies
+and has unresolved Dependabot alerts (tracked in Issue #9). It is **retained only
+for frozen evidence and source inspection**. New executions that select this
+fixture are rejected before the Codex version probe, workspace copy, or model
+attempt. The rejection applies to both the full campaign entrypoint and its
+individual attempt function; no production override is supported. Historical
+synthetic regression tests explicitly mock this guard while using fake Codex.
+
+Do **not** run `npm install`, `npm ci`, `npm run`, start a development server,
+or deploy `benchmarks/fixtures/frontend-review` manually. The installable
+historical `package.json` is now retired from the active fixture tree and
+preserved as `benchmarks/archive/frontend-review-v1/package.json.txt` (plus
+the exact original Git blob at the historical pinned commit). The runner
+verifies the archived text against that commit before other supported
+synthetic operations. It still cannot prohibit someone manually recreating
+an unsafe `package.json` outside CEK. The candidate under
+`benchmarks/candidates/frontend-review-v2` is not
+part of the historical protocol and requires a distinct campaign ID and
+security approval before model execution. Frozen results are unchanged.
+
 ## Authenticated v1 methodology
 
 The five fixed tasks are `backend-design`, `concurrency-pressure`, `frontend-review`, `node-small-bug`, and `repository-review`. Each case points to a fixture pinned at commit `1dbf382b6e838ca351c6fb8818a64aa793176198` and carries deterministic evidence-check groups. The runner rejects a fixture that differs from that pin.

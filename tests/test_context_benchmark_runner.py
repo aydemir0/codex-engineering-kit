@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 from benchmarks.model import load_cases, load_configurations
@@ -132,8 +133,15 @@ class ContextBenchmarkRunnerTests(unittest.TestCase):
         self.cases = load_cases(ROOT / "benchmarks" / "cases")
         self.configurations = load_configurations(ROOT / "benchmarks" / "configurations")
         self.commit = "78206e1a67800f21f059c7c699727fc3d40df9cf"
+        # Historical runner protocol tests use a fake Codex only. Keep the
+        # production guard enabled; bypass it solely within these test cases.
+        self.legacy_guard_patch = patch(
+            "scripts.acceptance.context_benchmark._reject_deprecated_fixture_cases"
+        )
+        self.legacy_guard_patch.start()
 
     def tearDown(self) -> None:
+        self.legacy_guard_patch.stop()
         self.temp.cleanup()
 
     def run_campaign(
