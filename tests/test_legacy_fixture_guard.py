@@ -48,6 +48,19 @@ class LegacyFixtureGuardTests(unittest.TestCase):
             self.legacy.repository_commit,
         )
 
+    def test_archive_integrity_check_rejects_corrupted_bytes(self) -> None:
+        original_read = Path.read_bytes
+        archived_path = ROOT / LEGACY_ARCHIVED_MANIFEST
+
+        def corrupt_only_archive(path: Path) -> bytes:
+            if path == archived_path:
+                return b'{"name":"tampered"}\n'
+            return original_read(path)
+
+        with patch.object(Path, "read_bytes", corrupt_only_archive):
+            with self.assertRaisesRegex(ValueError, "manifest archive is missing or modified"):
+                _verify_fixture_pins(ROOT, ROOT / "benchmarks" / "fixtures", self.cases)
+
     def test_legacy_fixture_is_rejected_even_when_case_id_is_renamed(self) -> None:
         renamed = replace(self.legacy, id="renamed-unsafe-case")
         with self.assertRaisesRegex(ValueError, "disabled for new benchmark execution"):
