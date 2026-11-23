@@ -45,7 +45,12 @@ class PatchedFrontendCandidateTests(unittest.TestCase):
         self.assertEqual(lock["packages"]["node_modules/next"]["version"], "16.4.5")
         self.assertEqual(lock["packages"]["node_modules/react"]["version"], "19.3.1")
         self.assertEqual(lock["packages"]["node_modules/react-dom"]["version"], "19.3.1")
+        self.assertEqual(package["devDependencies"]["@types/node"], "22.15.30")
+        self.assertEqual(lock["packages"]["node_modules/@types/node"]["version"], "22.15.30")
         self.assertEqual(lock["packages"][""]["devDependencies"], package["devDependencies"])
+        tsconfig = json.loads((CANDIDATE / "tsconfig.json").read_text(encoding="utf-8"))
+        self.assertEqual(tsconfig["compilerOptions"]["jsx"], "react-jsx")
+        self.assertIn(".next/dev/types/**/*.ts", tsconfig["include"])
         self.assertTrue(
             all(not version.startswith(("^", "~", ">", "<", "*")) for version in package["dependencies"].values())
         )
