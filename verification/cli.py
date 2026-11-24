@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from verification.runner import report_record, verify_project, write_report
+from verification.runner import VerificationScopeError, report_record, verify_project, write_report
 
 SUPPORTED_MANAGERS = ("npm", "pnpm", "yarn", "bun")
 
@@ -12,6 +12,10 @@ SUPPORTED_MANAGERS = ("npm", "pnpm", "yarn", "bun")
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run Codex Engineering Kit verification.")
     parser.add_argument("--project", required=True, help="Project directory to verify.")
+    parser.add_argument(
+        "--include-project", action="append", default=[], metavar="RELATIVE_DIR",
+        help="Verify this project under --project. Repeat to check multiple independent roots.",
+    )
     parser.add_argument("--package-manager", choices=SUPPORTED_MANAGERS)
     parser.add_argument("--json", action="store_true", dest="json_output")
     parser.add_argument(
@@ -24,11 +28,16 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
-    report = verify_project(
-        Path(args.project),
-        explicit_package_manager=args.package_manager,
-    )
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    try:
+        report = verify_project(
+            Path(args.project),
+            explicit_package_manager=args.package_manager,
+            project_roots=args.include_project,
+        )
+    except VerificationScopeError as exc:
+        parser.error(str(exc))
     if args.output:
         write_report(Path(args.output).expanduser(), report)
 

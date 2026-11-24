@@ -260,6 +260,55 @@ class CoverageContractTests(unittest.TestCase):
             [{"family": "python-unittest", "status": "passed"}],
         )
 
+    def test_unittest_with_only_skips_is_partial_for_tree_and_root(self) -> None:
+        source = (
+            "import unittest\nclass Skipped(unittest.TestCase):\n"
+            "    @unittest.skip('fixture is unavailable')\n"
+            "    def test_calculation(self): self.fail()\n"
+        )
+        for layout, family in (("tests/test_only.py", "python-unittest"),
+                               ("test_only.py", "python-unittest-root")):
+            with self.subTest(layout=layout), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                path = root / layout
+                path.parent.mkdir(exist_ok=True)
+                path.write_text(source, encoding="utf-8")
+                report = verify_project(root)
+                self.assertEqual(report.status, "partial")
+                self.assertEqual(dict(report.test_families), {family: "unavailable"})
+
+    def test_unittest_with_some_skips_and_a_pass_stays_passed(self) -> None:
+        self.add_test_file(
+            "test_math.py",
+            "import unittest\nclass Math(unittest.TestCase):\n"
+            "    @unittest.skip('fixture is unavailable')\n"
+            "    def test_skipped(self): self.fail()\n"
+            "    def test_calculation(self): self.assertEqual(2 + 2, 4)\n",
+        )
+        self.assertEqual(verify_project(self.root).status, "passed")
+
+    def test_pytest_needs_a_summary_with_a_passing_test(self) -> None:
+        self.add_test_file("test_math.py", "def test_calculation(): pass\n")
+        cases = [("s [100%]", "unavailable"), (". [100%]", "unavailable")]
+        for count in (1, 2, 100):
+            for suffix, expected in (
+                ("", "unavailable"),
+                (", 2 warnings", "unavailable"),
+                (", 1 passed", "passed"),
+            ):
+                summary = f"\x1b[33m=== {count} skipped{suffix} in 0.15s ===\x1b[0m"
+                cases.append((summary, expected))
+
+        for summary, expected in cases:
+            def runner(command, cwd):
+                return ProcessResult(tuple(command), 0, 1, "passed", summary, "")
+
+            with self.subTest(summary=summary):
+                result = discover_python_steps(
+                    self.root, module_available=lambda package: package == "pytest", runner=runner,
+                )
+                self.assertEqual(dict(result.test_families), {"python-pytest": expected})
+
     def test_script_arguments_are_not_augmented_for_any_package_manager(self) -> None:
         for manager in ("npm", "pnpm", "yarn", "bun"):
             with self.subTest(manager=manager):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from pathlib import Path
+from typing import Sequence
 
 from runtime.state import write_state
 from verification.git_checks import run_git_diff_check
@@ -21,6 +22,10 @@ PYTHON_MARKERS = (
     "pytest.ini",
     "conftest.py",
 )
+
+
+class VerificationScopeError(ValueError):
+    pass
 
 
 def _has_python_markers(project_path: Path) -> bool:
@@ -63,7 +68,7 @@ def _step_payload(step: VerificationStep) -> dict:
 def report_record(report: VerificationReport) -> dict:
     if report.status == "passed":
         assert_report_current(Path(report.project_path), report)
-    return {
+    record = {
         "schemaVersion": report.schema_version,
         "kind": REPORT_KIND,
         "projectType": report.project_type,
@@ -78,6 +83,9 @@ def report_record(report: VerificationReport) -> dict:
         "candidateDigest": report.candidate_digest,
         "candidateManifest": list(report.candidate_manifest),
     }
+    if report.project_roots:
+        record["projectRoots"] = list(report.project_roots)
+    return record
 
 
 def write_report(path: Path, report: VerificationReport) -> None:
@@ -111,15 +119,10 @@ def _report_status(
     return "partial"
 
 
-def verify_project(
-    project_path: Path | str,
-    explicit_package_manager: str | None = None,
-) -> VerificationReport:
-    project_path = Path(project_path).expanduser().resolve()
-    if not project_path.is_dir():
-        raise FileNotFoundError(f"Project path not found: {project_path}")
-
-    before = capture_manifest(project_path)
+def _project_checks(
+    project_path: Path,
+    explicit_package_manager: str | None,
+) -> tuple[str, str | None, tuple[VerificationStep, ...], tuple[tuple[str, str], ...]]:
     package_manager: str | None = None
     test_families: tuple[tuple[str, str], ...] = ()
     if (project_path / "package.json").is_file():
@@ -146,6 +149,63 @@ def verify_project(
     else:
         project_type = "generic"
         project_steps = ()
+    return project_type, package_manager, project_steps, test_families
+
+
+def _resolve_project_scopes(project: Path, roots: Sequence[str]) -> tuple[Path, ...]:
+    scopes: list[Path] = []
+    for name in roots:
+        relative = Path(name)
+        if relative.anchor or not relative.parts or ".." in relative.parts:
+            raise VerificationScopeError("--include-project requires a directory below --project")
+        scope = project / relative
+        if not scope.is_dir() or scope.resolve() != scope:
+            raise VerificationScopeError("--include-project requires an existing directory without path redirects")
+        if any(scope.is_relative_to(other) or other.is_relative_to(scope) for other in scopes):
+            raise VerificationScopeError("--include-project directories must not overlap or repeat")
+        scopes.append(scope)
+    return tuple(scopes)
+
+
+def verify_project(
+    project_path: Path | str,
+    explicit_package_manager: str | None = None,
+    *,
+    project_roots: Sequence[str] = (),
+) -> VerificationReport:
+    project_path = Path(project_path).expanduser().resolve()
+    if not project_path.is_dir():
+        raise FileNotFoundError(f"Project path not found: {project_path}")
+
+    scopes = _resolve_project_scopes(project_path, project_roots)
+    before = capture_manifest(project_path)
+    names: tuple[str, ...] = ()
+    if scopes:
+        project_type = "multi-root"
+        package_manager = None
+        project_steps: tuple[VerificationStep, ...] = ()
+        test_families: tuple[tuple[str, str], ...] = ()
+        for scope in scopes:
+            relative = scope.relative_to(project_path)
+            bound = tuple(
+                (Path(path).relative_to(relative).as_posix(), size, digest, mode)
+                for path, size, digest, mode in before if Path(path).is_relative_to(relative)
+            )
+            if bound != capture_manifest(scope):
+                raise VerificationScopeError("Included project files are outside the root candidate manifest")
+        for scope in scopes:
+            name = scope.relative_to(project_path).as_posix()
+            names += (name,)
+            _, _, scoped_steps, scoped_families = _project_checks(scope, explicit_package_manager)
+            project_steps += tuple(replace(step, name=f"{name}:{step.name}") for step in scoped_steps)
+            test_families += tuple(
+                (f"{name}:{family}", status)
+                for family, status in scoped_families or (("tests", "unavailable"),)
+            )
+    else:
+        project_type, package_manager, project_steps, test_families = _project_checks(
+            project_path, explicit_package_manager,
+        )
 
     steps = tuple(project_steps) + (
         scan_secret_patterns(project_path),
@@ -168,6 +228,7 @@ def verify_project(
         steps=steps,
         status=_report_status(project_type, tuple(project_steps), steps, test_families),
         test_families=test_families,
+        project_roots=names,
     )
     write_report(project_path / DEFAULT_REPORT_RELATIVE_PATH, report)
     return report

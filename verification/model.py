@@ -25,3 +25,4 @@ class VerificationReport:
     candidate_digest: str | None = None
     candidate_manifest: tuple[tuple[str, int, str, int], ...] = ()
     test_families: tuple[tuple[str, str], ...] = ()
+    project_roots: tuple[str, ...] = ()

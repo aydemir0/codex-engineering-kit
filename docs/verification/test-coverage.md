@@ -41,6 +41,13 @@ bytecode writes. Existing project bytecode caches are preserved. This keeps
 an old timestamp-based cache from substituting stale Python code for the
 candidate being verified.
 
+A standard unittest summary that reports every test as skipped leaves that
+family `unavailable`, even if the test command exits zero. A pytest family
+requires a summary reporting at least one passing test. If output settings
+such as `-qq` suppress the summary, the family remains `unavailable` even
+when the subprocess exits zero. Use an output configuration that emits the
+terminal summary to attest those tests.
+
 The `steps` array retains exact attempted commands, exit codes and bounded
 evidence; the additive `testFamilies` array enumerates detected families
 and their gate statuses. `skipped`, `unavailable` or `not-run` tests

@@ -57,19 +57,44 @@ def _run_python_tests(command: list[str], project_path: Path) -> ProcessResult:
         return run_command(command, project_path, env=env)
 
 
+def _incomplete_test_evidence(command: list[str], result: ProcessResult) -> str | None:
+    if command[1:3] == ["-m", "unittest"] and result.exit_code in {0, 5}:
+        for output in (result.stderr_tail, result.stdout_tail):
+            summary = re.search(
+                r"(?m)^Ran (\d+) tests? in [^\n]+\n\s*"
+                r"(?:OK(?: \(([^()\n]+)\))?|NO TESTS RAN)\s*\Z",
+                output,
+            )
+            if not summary:
+                continue
+            count = int(summary[1])
+            if count == 0:
+                return "unittest discovered zero tests; verification coverage is incomplete."
+            skipped = re.fullmatch(r"skipped=(\d+)", summary[2] or "")
+            if result.status == "passed" and skipped and int(skipped[1]) == count:
+                return "unittest skipped all tests; verification coverage is incomplete."
+    elif command[1:3] == ["-m", "pytest"] and result.status == "passed":
+        output = re.sub(r"\x1b\[[0-9;]*m", "", result.stdout_tail)
+        summary = re.search(
+            r"(?m)^[= \t]*(\d+ [a-z]+(?:, \d+ [a-z]+)*) in "
+            r"\d+(?:\.\d+)?s(?: \([0-9:]+\))?[= \t]*\s*\Z",
+            output,
+        )
+        if not summary or not re.search(r"\b[1-9]\d* passed\b", summary[1]):
+            return "pytest did not report a passing test; verification coverage is incomplete."
+    return None
+
+
 def _run_step(name: str, command: list[str], project_path: Path, runner) -> VerificationStep:
     result = runner(command, project_path)
     status = result.status
     exit_code = result.exit_code
     evidence = _process_evidence(result)
-    if name == "tests" and "unittest" in command and status in {"passed", "failed"}:
-        # unittest exits 0 even when it discovers *zero* tests.
-        output = "\n".join((result.stdout_tail, result.stderr_tail))
-        match = re.search(r"\bRan\s+(\d+)\s+tests?\b", output)
-        if match and int(match.group(1)) == 0:
-            status = "unavailable"
-            exit_code = None
-            evidence = "unittest discovered zero tests; verification coverage is incomplete."
+    incomplete = _incomplete_test_evidence(command, result)
+    if incomplete:
+        status = "unavailable"
+        exit_code = None
+        evidence = incomplete
     return VerificationStep(
         name=name,
         command=list(command),
