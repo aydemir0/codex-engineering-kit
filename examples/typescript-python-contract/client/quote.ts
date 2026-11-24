@@ -6,7 +6,7 @@ type Quote = { totalCents: number } | { error: 'invalid-quantity' };
 const service = fileURLToPath(new URL('../service/quote.py', import.meta.url));
 
 export function quote(quantity: number): Quote {
-  const result = spawnSync(process.env.CEK_EXAMPLE_PYTHON ?? 'python', [service], {
+  const result = spawnSync('python', [service], {
     input: JSON.stringify({ quantity }),
     encoding: 'utf8',
     timeout: 5_000,

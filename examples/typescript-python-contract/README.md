@@ -4,13 +4,12 @@ This example uses Node 24, npm, and Python 3.11 or newer on the command path.
 The client calls the Python service over standard input and output. No server,
 package installation, or credentials are required.
 
-From the CEK checkout root, copy the example to a disposable directory. Set
-`CEK_EXAMPLE_PYTHON` to the same Python executable used to run CEK.
+From the CEK checkout root, copy the example to a disposable directory.
+Both CEK and the client use the `python` command on the command path.
 
 ```powershell
 $demo = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString())
 Copy-Item -LiteralPath ./examples/typescript-python-contract -Destination $demo -Recurse
-$env:CEK_EXAMPLE_PYTHON = (Get-Command python).Source
 python -B -m verification.cli --project $demo --include-project client --include-project service --require-complete --json
 ```
 
