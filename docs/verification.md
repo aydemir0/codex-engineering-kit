@@ -45,6 +45,22 @@ When Node and Python markers coexist in the same project root, CEK retains
 the Node classification and runs both the Node preset and the discovered
 Python tests. The Python steps have distinct names such as `tests-python`.
 
+To verify independent project roots under a common checkout, specify each
+root with a relative path. For example, use the following command with
+[the TypeScript/Python example](../examples/typescript-python-contract/README.md).
+
+```text
+python -m verification.cli --project PATH --include-project client --include-project service --require-complete --json
+```
+
+Explicit scopes replace automatic checks at the common root. Repository-level
+checks and the candidate manifest still cover the common root. The report
+lists the selected directories under `projectRoots` and prefixes each
+project's steps and test families with its directory. A failure in any scope
+fails the aggregate. A scope without a covered test family makes it partial
+when the checks that ran pass. Paths must denote separate, existing
+directories under the root.
+
 ## Node package-manager resolution
 
 Initial supported managers are exactly `npm`, `pnpm`, `yarn`, and `bun`. Resolution order is:
